@@ -43,7 +43,7 @@ type Product struct {
 type Cart struct {
 	gorm.Model
 	UserID    uint       `json:"user_id"`
-	CartItems []CartItem `json:"cart_items" gorm:"foreignKey:CartID"`
+	CartItems []CartItem `json:"cart_items" gorm:"foreignKey:CartID;constraint:OnDelete:CASCADE;"`
 }
 
 // CartItem Model
@@ -51,8 +51,8 @@ type CartItem struct {
 	gorm.Model
 	CartID    uint    `json:"cart_id"`
 	ProductID uint    `json:"product_id"`
-	Product   Product `json:"product" gorm:"foreignKey:ProductID"`
-	Quantity  int     `json:"quantity"`
+	Product   Product `json:"product" gorm:"foreignKey:ProductID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Quantity  int     `json:"quantity" gorm:"not null;default:1"`
 	UserID    uint    `json:"user_id"`
 }
 

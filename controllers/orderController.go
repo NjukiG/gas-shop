@@ -147,6 +147,58 @@ func GetOrder(c *gin.Context) {
 // 	c.JSON(http.StatusOK, gin.H{"order": order})
 // }
 
+// UpdateOrderStatus handles the request to update an order's status
+func UpdateOrderStatus(c *gin.Context) {
+	// Fetch the order using the order_id from the URL parameters
+	var order models.Order
+	if err := initializers.DB.Where("id = ?", c.Param("order_id")).First(&order).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		return
+	}
+
+	// Bind the request body to get the new status
+	var body struct {
+		Status models.OrderStatus `json:"status" binding:"required"`
+	}
+
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	// Validate the new status
+	validStatuses := []models.OrderStatus{
+		models.OrderPending,
+		models.OrderProcessed,
+		models.OrderShipped,
+		models.OrderDelivered,
+		models.OrderCancelled,
+	}
+
+	isValidStatus := false
+	for _, status := range validStatuses {
+		if body.Status == status {
+			isValidStatus = true
+			break
+		}
+	}
+
+	if !isValidStatus {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order status"})
+		return
+	}
+
+	// Update the order status
+	order.Status = string(body.Status)
+	if err := initializers.DB.Save(&order).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
+		return
+	}
+
+	// Respond with a success message
+	c.JSON(http.StatusOK, gin.H{"message": "Order status updated successfully", "order": order})
+}
+
 // func UpdateOrderStatus(c *gin.Context) {
 // 	var order models.Order
 // 	if err := initializers.DB.Where("id = ?", c.Param("order_id")).First(&order).Error; err != nil {

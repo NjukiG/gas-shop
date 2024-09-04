@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // func CreateCart(c *gin.Context) {
@@ -39,152 +40,74 @@ import (
 // 	})
 // }
 
-// Adding items to the cart
-// func AddItemToCart(c *gin.Context) {
-// 	// Lets get the user id of this cart
-// 	user, exists := c.Get("user")
-
-// 	if !exists {
-// 		c.JSON(http.StatusUnauthorized, gin.H{"Error": "User not authenticated"})
-// 		return
-// 	}
-
-// 	userID := user.(models.User).ID
-
-// 	// cartId := c.Param("id")
-// 	var cart models.Cart
-
-// 	myCart := initializers.DB.Preload("CartItems").First(&cart)
-
-// 	// Check if cart is there
-// 	if myCart.Error != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{
-// 			"Error": "Cart not found",
-// 		})
-// 		return
-// 	}
-
-// 	var body struct {
-// 		ProductID uint
-// 		Quantity  int
-// 	}
-
-// 	// Check if product is there
-// 	productID := c.Param("id")
-// 	var product models.Product
-// 	resultProduct := initializers.DB.First(&product, productID)
-
-// 	if resultProduct.Error != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{
-// 			"Error": "Product not found",
-// 		})
-// 		return
-// 	}
-
-// 	if c.Bind(&body) != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"Error": "Failed to read request body",
-// 		})
-// 		return
-// 	}
-
-// 	// Adding item to cart moja tu
-// 	cartItem := models.CartItem{
-// 		CartID:    cart.ID,
-// 		ProductID: body.ProductID,
-// 		Quantity:  body.Quantity,
-// 		UserID:    userID,
-// 	}
-
-// 	result := initializers.DB.Create(&cartItem)
-
-// 	if result.Error != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"Error": "Failed to add item to cart",
-// 		})
-// 		return
-// 	}
-
-// 	// Preload the associated Product data
-// 	initializers.DB.Preload("Product").First(&cartItem, cartItem.ID)
-
-// 	c.JSON(http.StatusCreated, gin.H{
-// 		"Cart-Item": cartItem,
-// 	})
-
-// }
-
-// Adding items to the cart
 func AddItemToCart(c *gin.Context) {
-	var body struct {
-		ProductID uint
-		Quantity  int
-	}
-
-	if c.Bind(&body) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Failed to read request body",
-		})
-		return
-	}
-
-	// Get the authenticated user
+	// Assuming user is authenticated
 	user, exists := c.Get("user")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": "User not authenticated"})
 		return
 	}
+
 	userID := user.(models.User).ID
 
-	// Check if the user has a cart
+	// Parse the request body
+	var body struct {
+		ProductID uint `json:"ProductID"`
+		Quantity  int  `json:"Quantity"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Invalid request data", "Detail": err.Error()})
+		return
+	}
+
+	// Find or create the cart for this user
 	var cart models.Cart
-	result := initializers.DB.Where("user_id = ?", userID).First(&cart)
-	if result.Error != nil {
-		// If no cart exists, create one
-		cart = models.Cart{
-			UserID: userID,
-		}
-		createResult := initializers.DB.Create(&cart)
-		if createResult.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"Error": "Failed to create cart",
-			})
-			return
-		}
+	if err := initializers.DB.FirstOrCreate(&cart, models.Cart{UserID: userID}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to find or create a cart", "Detail": err.Error()})
+		return
 	}
 
 	// Check if the product exists
 	var product models.Product
-	productResult := initializers.DB.First(&product, body.ProductID)
-	if productResult.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"Error": "Product not found",
-		})
+	if err := initializers.DB.First(&product, body.ProductID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Product not found"})
 		return
 	}
 
-	// Add item to the cart
-	cartItem := models.CartItem{
-		CartID:    cart.ID,
-		ProductID: body.ProductID,
-		Quantity:  body.Quantity,
-		UserID:    userID,
+	// Check if the cart item already exists for this product
+	var cartItem models.CartItem
+	if err := initializers.DB.First(&cartItem, "cart_id = ? AND product_id = ?", cart.ID, body.ProductID).Error; err != nil {
+		if gorm.ErrRecordNotFound == err {
+			// Item does not exist in cart, create new one
+			cartItem = models.CartItem{
+				CartID:    cart.ID,
+				ProductID: body.ProductID,
+				Quantity:  body.Quantity,
+				UserID:    userID, // Make sure UserID is set
+			}
+
+			if err := initializers.DB.Create(&cartItem).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to add item to cart", "Detail": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusCreated, gin.H{"Message": "Item added to cart"})
+			return
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to check cart items", "Detail": err.Error()})
+			return
+		}
 	}
 
-	addItemResult := initializers.DB.Create(&cartItem)
-	if addItemResult.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Failed to add item to cart",
-		})
+	// If item already exists, update the quantity
+	cartItem.Quantity += body.Quantity
+	if err := initializers.DB.Save(&cartItem).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to update cart item quantity", "Detail": err.Error()})
 		return
 	}
 
-	// Preload the associated Product data
-	initializers.DB.Preload("Product").First(&cartItem, cartItem.ID)
-
-	c.JSON(http.StatusCreated, gin.H{
-		"CartItem": cartItem,
-	})
+	c.JSON(http.StatusOK, gin.H{"Message": "Cart item updated"})
 }
 
 // List items in the cart

@@ -18,7 +18,7 @@ func AddShippingDetails(c *gin.Context) {
 		PhoneNumber string
 	}
 
-	if c.Bind(&body) != nil {
+	if err := c.Bind(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Failed to read request body"})
 		return
 	}
@@ -32,16 +32,15 @@ func AddShippingDetails(c *gin.Context) {
 	userID := user.(models.User).ID
 
 	// Check if user already has shipping details
-	var checkShippingDetailExist models.ShippingDetail
-	checkUserHadShipDets := initializers.DB.Where("user_id = ?", userID).First(&checkShippingDetailExist)
-
-	if checkUserHadShipDets.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
+	var existingShippingDetail models.ShippingDetail
+	if err := initializers.DB.Where("user_id = ?", userID).First(&existingShippingDetail).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{
 			"Error": "User already has shipping details",
 		})
 		return
 	}
 
+	// Add new shipping details
 	shippingDetail := models.ShippingDetail{
 		UserID:      userID,
 		Address:     body.Address,
@@ -52,14 +51,18 @@ func AddShippingDetails(c *gin.Context) {
 		PhoneNumber: body.PhoneNumber,
 	}
 
-	result := initializers.DB.Create(&shippingDetail)
-
-	if result.Error != nil {
+	if result := initializers.DB.Create(&shippingDetail); result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Failed to add shipping details"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"Message": "Shipping details added successfully"})
+	// Reload the shipping detail with user data to return the full object
+	if err := initializers.DB.Preload("User").First(&shippingDetail, shippingDetail.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to load shipping details with user data"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"ShippingDetails": shippingDetail})
 }
 
 // UpdateShippingDetails updates existing shipping details for the user
@@ -85,30 +88,29 @@ func UpdateShippingDetails(c *gin.Context) {
 	var shippingDetail models.ShippingDetail
 
 	// Find the shipping detail by user ID
-	initializers.DB.First(&shippingDetail, "user_id = ?", userID)
-
-	if shippingDetail.ID == 0 {
+	if err := initializers.DB.Where("user_id = ?", userID).First(&shippingDetail).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Shipping details not found"})
 		return
 	}
 
 	// Update the shipping details
-	// shippingDetail.Address = body.Address
-	// shippingDetail.City = body.City
-	// shippingDetail.State = body.State
-	// shippingDetail.PostalCode = body.PostalCode
-	// shippingDetail.Country = body.Country
-	// shippingDetail.PhoneNumber = body.PhoneNumber
+	shippingDetail.Address = body.Address
+	shippingDetail.City = body.City
+	shippingDetail.State = body.State
+	shippingDetail.PostalCode = body.PostalCode
+	shippingDetail.Country = body.Country
+	shippingDetail.PhoneNumber = body.PhoneNumber
 
-	initializers.DB.Model(&shippingDetail).Updates(models.ShippingDetail{
-		Address:     body.Address,
-		State:       body.State,
-		City:        body.City,
-		PostalCode:  body.PostalCode,
-		PhoneNumber: body.PhoneNumber,
-		Country:     body.Country,
-		UserID:      user.(models.User).ID,
-	})
+	if err := initializers.DB.Save(&shippingDetail).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update shipping details"})
+		return
+	}
+
+	// Reload the shipping detail with user data to return the full object
+	if err := initializers.DB.Preload("User").First(&shippingDetail, shippingDetail.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to load shipping details with user data"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"Message":         "Shipping details updated successfully",
@@ -116,10 +118,8 @@ func UpdateShippingDetails(c *gin.Context) {
 	})
 }
 
-// GetShippingDetails retrieves the shipping details for the user
 func GetShippingDetails(c *gin.Context) {
 	// Get the user from the context
-	// Get the authenticated user
 	user, exists := c.Get("user")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": "User not authenticated"})
@@ -129,12 +129,9 @@ func GetShippingDetails(c *gin.Context) {
 
 	var shippingDetail models.ShippingDetail
 
-	initializers.DB.Where("user_id = ?", userID).First(&shippingDetail)
-
-	if shippingDetail.ID == 0 || shippingDetail.UserID != userID {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Shipping details not found",
-		})
+	// Preload the User, Cart, and CartItems associations
+	if err := initializers.DB.Preload("User.Cart.CartItems.Product").First(&shippingDetail, "user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Shipping details not found"})
 		return
 	}
 

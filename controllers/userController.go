@@ -78,7 +78,7 @@ func Login(c *gin.Context) {
 	// Lookup requested user
 	var user models.User
 
-	initializers.DB.First(&user, "email = ?", body.Email)
+    initializers.DB.Preload("Cart.CartItems").First(&user, "email = ?", body.Email)
 
 	if user.ID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -121,17 +121,29 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Logged In",
-		"token":      tokenString, // Dont Show token
+		"token":   tokenString, // Dont Show token
 	})
 }
 
 // Func to  validate that user is actually logged in.
 func ValidateUser(c *gin.Context) {
-	user, _ := c.Get("user")
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "User not authenticated"})
+		return
+	}
+
+	userID := user.(models.User).ID
+
+	var userWithCart models.User
+	if err := initializers.DB.Preload("Cart.CartItems.Product").First(&userWithCart, userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to load user with cart", "Detail": err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"Message": "I am Logged in...",
-		"user":    user,
+		"user":    userWithCart,
 	})
 }
 
