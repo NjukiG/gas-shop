@@ -58,7 +58,7 @@ const Footer = () => {
       <aside>
         <p>
           Copyright © {new Date().getFullYear()} - All right reserved by NjukiG
-          Gas & Electronics Services LTD
+          Gas & Electricals Services LTD
         </p>
       </aside>
     </footer>

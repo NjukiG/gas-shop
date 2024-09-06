@@ -8,16 +8,20 @@ const About = () => {
         <div className="stats bg-primary shadow">
           <div className="stat">
             <div className="stat-title text-primary-content text-4xl font-bold tracking-widest">
-              comfy
+              NjukiG
             </div>
           </div>
         </div>
+        <h1 className="text-4xl font-bold leading-none tracking-tight sm:text-6xl ">
+          Gas & Electricals
+        </h1>
       </div>
       <p className="mt-6 text-lg leading-8 max-w-2xl mx-auto">
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Hic veniam
-        odit, officiis eos mollitia alias, doloremque, aspernatur ratione
-        asperiores voluptas labore minus dolores reprehenderit corporis quos.
-        Assumenda molestias harum dignissimos?
+        Here at NjukiG Gas and Electricals, we are a one stop store for cooking
+        gas products and home electrical appliances. We focus mainly on brand
+        new cooking gas cylinders, gas refills, gas cylinder appliances like
+        burners and second-hand electrical appliances. We have a total of three
+        stores spread out across Nairobi.
       </p>
     </>
   );
