@@ -1,0 +1,28 @@
+package routes
+
+import (
+	"gas-shop/controllers"
+	"gas-shop/middleware"
+
+	"github.com/gin-gonic/gin"
+)
+
+func RegisterCategoryRoutes(router *gin.Engine) {
+	publicRoutes := router.Group("/public")
+
+	{
+		// Routes to get all categories and also by ID each. In public
+		publicRoutes.GET("/categories", controllers.GetAllCategories)
+		publicRoutes.GET("/categories/:id", controllers.GetCategoryByID)
+
+	}
+
+	protectedRoutes := router.Group("/protected")
+	protectedRoutes.Use(middleware.RequireAuth)
+
+	{
+		protectedRoutes.POST("/categories", controllers.CreateCategory)
+		// protectedRoutes.PUT("/categories/:id", controllers.UpdateCategory)
+		// protectedRoutes.DELETE("/categories/:id", controllers.DeleteCategory)
+	}
+}
