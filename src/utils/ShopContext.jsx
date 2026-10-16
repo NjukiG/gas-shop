@@ -253,7 +253,7 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  // Update Shipping details
+  // Make and order
   const makeNewOrder = async () => {
     try {
       const response = await fetch(
