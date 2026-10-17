@@ -1,9 +1,50 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink text-fog font-sans antialiased;
+  }
+  h1, h2, h3, h4, h5 {
+    @apply font-display tracking-tightest;
+  }
+}
+
 @layer components {
   .align-element {
-    @apply mx-auto max-w-6xl px-8;
+    @apply mx-auto max-w-6xl px-6 sm:px-8;
+  }
+
+  /* Consistent vertical rhythm for page/landing sections.
+     scroll-mt offsets anchored sections below the sticky nav. */
+  .section-block {
+    @apply py-16 lg:py-20 scroll-mt-28;
+  }
+
+  /* Reusable brand helpers for consistency across the UI. */
+  .brand-heading {
+    @apply font-display font-bold tracking-tightest text-fog;
+  }
+  .brand-eyebrow {
+    @apply text-xs uppercase tracking-[0.3em] text-ash;
+  }
+  .brand-card {
+    @apply bg-onyx border border-graphite rounded-box;
+  }
+  .brand-btn {
+    @apply inline-flex items-center justify-center rounded-btn bg-platinum px-6 py-3
+           font-display text-sm font-semibold uppercase tracking-wider text-ink
+           transition-colors duration-200 hover:bg-chrome;
+  }
+  .brand-btn-outline {
+    @apply inline-flex items-center justify-center rounded-btn border border-graphite px-6 py-3
+           font-display text-sm font-semibold uppercase tracking-wider text-fog
+           transition-colors duration-200 hover:border-platinum hover:text-platinum;
   }
 }

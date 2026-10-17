@@ -7,7 +7,7 @@ const ProductsGrid = () => {
   const { products, addToCart } = useShop();
 
   return (
-    <div className="pt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3 ">
+    <div className="pt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {(products || []).map((product) => {
         const { Title, Price, Image, featured, Brand, ID } = product;
         const dollarsAmount = formatPrice(Price);

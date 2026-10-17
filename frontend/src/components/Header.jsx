@@ -10,16 +10,16 @@ const Header = () => {
   };
 
   return (
-    <header className=" bg-neutral py-2 text-neutral-content ">
-      <div className="align-element flex justify-center sm:justify-end ">
-        {/* USER */}
-        {/* LINKS */}
+    <header className="bg-onyx border-b border-graphite py-2 text-fog">
+      <div className="align-element flex justify-center sm:justify-end">
         <div className="flex gap-x-6 justify-center items-center">
           {user ? (
-            <div className="flex gap-x-2 sm:gap-x-8 items-center">
-              <p className="text-xs sm:text-sm">Hello, {user.FullName}</p>
+            <div className="flex gap-x-4 sm:gap-x-6 items-center">
+              <p className="text-xs sm:text-sm text-ash">
+                Welcome back, <span className="text-fog">{user.FullName}</span>
+              </p>
               <button
-                className="btn btn-xs btn-outline btn-primary "
+                className="brand-eyebrow hover:text-platinum transition-colors"
                 onClick={handleLogout}
               >
                 Logout
@@ -27,14 +27,17 @@ const Header = () => {
             </div>
           ) : (
             <>
-              <Link to="/login" className="link link-hover text-xs sm:text-sm">
+              <Link
+                to="/login"
+                className="brand-eyebrow hover:text-platinum transition-colors"
+              >
                 Sign in
               </Link>
               <Link
                 to="/register"
-                className="link link-hover text-xs sm:text-sm"
+                className="brand-eyebrow hover:text-platinum transition-colors"
               >
-                Create an Account
+                Create account
               </Link>
             </>
           )}

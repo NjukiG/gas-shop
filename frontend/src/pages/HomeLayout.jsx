@@ -1,20 +1,17 @@
-import { Outlet, useNavigate } from "react-router-dom";
-import { Navbar, Loading, Header } from "../components";
+import { Outlet } from "react-router-dom";
+import { Navbar, Header } from "../components";
+import Footer from "../components/Footer";
+
 const HomeLayout = () => {
-  const navigation = useNavigate();
-  const isPageLoading = navigation.state === "loading";
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Header />
       <Navbar />
-      {isPageLoading ? (
-        <Loading />
-      ) : (
-        <section className="align-element py-5">
-          <Outlet />
-        </section>
-      )}
-    </>
+      <main className="align-element flex-1 w-full">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
   );
 };
 export default HomeLayout;

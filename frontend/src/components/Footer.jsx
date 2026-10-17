@@ -3,19 +3,19 @@ import { NavLink } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="footer footer-center bg-base-200 text-base-content rounded p-10">
-      <nav className="grid grid-flow-col gap-4">
-        <a href="/about" className="link link-hover">
+    <footer className="footer footer-center bg-onyx border-t border-graphite text-fog p-10 mt-16">
+      <nav className="grid grid-flow-col gap-6">
+        <a href="/about" className="brand-eyebrow hover:text-platinum transition-colors">
           About
         </a>
-        <a href="products" className="link link-hover">
-          Products
+        <a href="products" className="brand-eyebrow hover:text-platinum transition-colors">
+          Shop
         </a>
-        <a href="cart" className="link link-hover">
+        <a href="cart" className="brand-eyebrow hover:text-platinum transition-colors">
           Cart
         </a>
-        <a href="checkout" className="link link-hover">
-          Checkout
+        <a href="orders" className="brand-eyebrow hover:text-platinum transition-colors">
+          Orders
         </a>
       </nav>
       <nav>
@@ -56,9 +56,9 @@ const Footer = () => {
         </div>
       </nav>
       <aside>
-        <p>
-          Copyright © {new Date().getFullYear()} - All right reserved by NjukiG
-          Gas & Electricals Services LTD
+        <p className="text-ash text-sm">
+          © {new Date().getFullYear()} ScentCity — Modern fragrance for the
+          modern man.
         </p>
       </aside>
     </footer>

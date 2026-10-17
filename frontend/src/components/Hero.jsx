@@ -1,47 +1,55 @@
 import { Link } from "react-router-dom";
 
 const hero1 =
-  "https://images.unsplash.com/photo-1596465664095-f1f622965562?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+  "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=1740&auto=format&fit=crop";
 const hero2 =
-  "https://www.businessdailyafrica.com/resource/image/4395466/portrait_ratio1x1/1600/1600/4970b49be7fc1b49f75fa4da196cfd70/eq/gas.jpg";
+  "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?q=80&w=1740&auto=format&fit=crop";
 const hero3 =
-  "https://images.unsplash.com/photo-1661045683387-a58b92c4ac55?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
-const hero4 =
-  "https://images.unsplash.com/photo-1664396113489-e50bddd4a777?q=80&w=1742&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+  "https://images.unsplash.com/photo-1619994403073-2cec844b8e63?q=80&w=1740&auto=format&fit=crop";
 
-const carouselImages = [hero1, hero2, hero3, hero4];
+const carouselImages = [hero1, hero2, hero3];
+
 const Hero = () => {
   return (
-    <div className=" grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+    <section
+      id="home"
+      className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center pt-8 pb-16 lg:pt-10 lg:pb-20 scroll-mt-28"
+    >
       <div>
-        <h1 className="max-w-2xl text-4xl font-bold tracking-tight  sm:text-6xl ">
-          We’re changing the way we shop for cooking gas and home appliances.
+        <p className="brand-eyebrow mb-5">ScentCity — Modern Fragrance</p>
+        <h1 className="brand-heading text-4xl sm:text-6xl leading-[1.05]">
+          Smell like you
+          <span className="text-platinum"> mean it.</span>
         </h1>
 
-        <p className="mt-8 max-w-xl text-lg leading-8">
-          NjukiG Gas and electrical is your one stop store for your gas refills,
-          brand new gas cylinders, home electrical appliances and other gas
-          related items.
+        <p className="mt-6 max-w-xl text-base leading-8 text-ash">
+          Bold, modern fragrances for the man who shows up. Curated niche
+          scents, honest notes, and no guesswork — find a signature that moves
+          with you.
         </p>
-        <div className="mt-10 ">
-          <Link to="products" className="btn btn-primary ">
-            Our Products
+
+        <div className="mt-10 flex items-center gap-4">
+          <Link to="products" className="brand-btn">
+            Shop the collection
+          </Link>
+          <Link to="about" className="brand-btn-outline">
+            Our story
           </Link>
         </div>
       </div>
-      <div className="hidden  h-[28rem] lg:carousel carousel-center   p-4 space-x-4 bg-neutral rounded-box">
-        {carouselImages.map((image, index) => {
-          return (
-            <div key={image} className="carousel-item">
-              <img
-                src={image}
-                className="rounded-box h-full w-80  object-cover"
-              />
-            </div>
-          );
-        })}
+
+      <div className="hidden lg:carousel carousel-center h-[30rem] p-4 space-x-4 bg-onyx border border-graphite rounded-box">
+        {carouselImages.map((image) => (
+          <div key={image} className="carousel-item">
+            <img
+              src={image}
+              alt="ScentCity fragrance"
+              className="rounded-box h-full w-80 object-cover"
+            />
+          </div>
+        ))}
       </div>
-    </div>
+    </section>
   );
 };
 export default Hero;
