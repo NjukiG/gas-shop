@@ -1,45 +1,42 @@
 package controllers
 
 import (
+	"net/http"
+	"time"
+
 	"gas-shop/config"
 	"gas-shop/initializers"
 	"gas-shop/models"
-	"net/http"
-	"time"
+	"gas-shop/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Func to register a new user
+// RegisterUser creates a new buyer account.
 func RegisterUser(c *gin.Context) {
 	var body struct {
-		FullName string
-		Email    string
-		Password string
+		FullName string `json:"FullName" binding:"required"`
+		Email    string `json:"Email" binding:"required,email"`
+		Password string `json:"Password" binding:"required,min=8"`
 	}
 
-	if c.Bind(&body) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Failed to read request body",
-		})
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request body: name, a valid email, and a password of at least 8 characters are required")
 		return
 	}
 
-	// Hash the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
-
+	// Hash the password.
+	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Failed to hash the password",
-		})
+		response.Error(c, http.StatusInternalServerError, "Failed to process password")
 		return
 	}
 
-	// Create a new user. The role is always Buyer for public self-registration;
-	// it is intentionally NOT taken from the request body so a user cannot
-	// escalate themselves to Admin. Admin accounts are provisioned separately.
+	// The role is always Buyer for public self-registration; it is intentionally
+	// NOT taken from the request body so a user cannot escalate to Admin. Admin
+	// accounts are provisioned separately.
 	user := models.User{
 		FullName: body.FullName,
 		Role:     models.RoleBuyer,
@@ -47,91 +44,69 @@ func RegisterUser(c *gin.Context) {
 		Password: string(hash),
 	}
 
-	result := initializers.DB.Create(&user)
-
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"Error": "Failed to create a new user",
-		})
+	if result := initializers.DB.Create(&user); result.Error != nil {
+		// Most commonly a duplicate email (unique constraint).
+		response.Error(c, http.StatusConflict, "Could not create user; the email may already be registered")
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"Message": "New user created",
-	})
+	response.JSON(c, http.StatusCreated, gin.H{"message": "User created successfully"})
 }
 
-// Func to Login the user
+// Login authenticates a user and returns a signed JWT.
 func Login(c *gin.Context) {
-
-	// Get email and password of the user
 	var body struct {
-		Email    string
-		Password string
+		Email    string `json:"Email" binding:"required,email"`
+		Password string `json:"Password" binding:"required"`
 	}
 
-	if c.Bind(&body) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Failed to read the body request...",
-		})
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request body: a valid email and password are required")
 		return
 	}
 
-	// Lookup requested user
+	// Look up the requested user.
 	var user models.User
+	initializers.DB.Preload("Cart.CartItems").First(&user, "email = ?", body.Email)
 
-    initializers.DB.Preload("Cart.CartItems").First(&user, "email = ?", body.Email)
-
+	// Use a single generic message for both unknown email and wrong password
+	// to avoid leaking which accounts exist.
 	if user.ID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Invalid email or password (or something else)",
-		})
+		response.Error(c, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Invalid email or password (prolly password)",
-		})
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
+		response.Error(c, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
-	// Compare send in password with hashed password
-	// Generate a JWT Token
-
+	// Generate a JWT.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID,
 		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
 	})
 
-	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString([]byte(config.Get().JWTSecret))
-
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to create token",
-		})
+		response.Error(c, http.StatusInternalServerError, "Failed to create authentication token")
 		return
 	}
 
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("Authorization", tokenString, 3600*24*30, "", "", false, true)
 
-	// Send it back
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "Logged In",
-		"token":   tokenString, // Dont Show token
+	response.JSON(c, http.StatusOK, gin.H{
+		"message": "Logged in successfully",
+		"token":   tokenString,
 	})
 }
 
-// Func to  validate that user is actually logged in.
+// ValidateUser returns the currently authenticated user with their cart.
 func ValidateUser(c *gin.Context) {
 	user, exists := c.Get("user")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "User not authenticated"})
+		response.Error(c, http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
@@ -139,19 +114,18 @@ func ValidateUser(c *gin.Context) {
 
 	var userWithCart models.User
 	if err := initializers.DB.Preload("Cart.CartItems.Product").First(&userWithCart, userID).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to load user with cart", "Detail": err.Error()})
+		response.Error(c, http.StatusInternalServerError, "Failed to load user")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"Message": "I am Logged in...",
+	response.JSON(c, http.StatusOK, gin.H{
+		"message": "Authenticated",
 		"user":    userWithCart,
 	})
 }
 
-// Logout function
+// LogoutUser clears the authentication cookie.
 func LogoutUser(c *gin.Context) {
 	c.SetCookie("Authorization", "", -1, "", "", false, true)
-
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+	response.JSON(c, http.StatusOK, gin.H{"message": "Logged out successfully"})
 }

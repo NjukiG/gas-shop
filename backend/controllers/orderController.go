@@ -2,37 +2,50 @@ package controllers
 
 import (
 	"errors"
-	"gas-shop/initializers"
-	"gas-shop/models"
 	"net/http"
 	"strconv"
+
+	"gas-shop/initializers"
+	"gas-shop/models"
+	"gas-shop/response"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-// CreateOrder creates a new order based on the cart items
+// CreateOrder creates a new order from the authenticated user's cart.
+//
+// The order creation and cart clearing run inside a single transaction so the
+// cart is only emptied if the order is persisted successfully.
 func CreateOrder(c *gin.Context) {
-
 	user, _ := c.Get("user")
 	userID := user.(models.User).ID
 
-	// Find the cart for this user
+	// Load the user's cart with product details.
 	var cart models.Cart
-	initializers.DB.Preload("CartItems.Product").Where("user_id = ?", userID).First(&cart)
-
-	if len(cart.CartItems) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Your cart is empty!"})
+	if err := initializers.DB.
+		Preload("CartItems.Product").
+		Where("user_id = ?", userID).
+		First(&cart).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		response.Error(c, http.StatusInternalServerError, "Failed to load cart")
 		return
 	}
 
-	// Find the shipping details for this user
-	var shippingDetail models.ShippingDetail
-	initializers.DB.Where("user_id = ?", userID).First(&shippingDetail)
+	if len(cart.CartItems) == 0 {
+		response.Error(c, http.StatusBadRequest, "Your cart is empty")
+		return
+	}
 
-	// Calculate total price
+	// Shipping details are required to place an order.
+	var shippingDetail models.ShippingDetail
+	if err := initializers.DB.Where("user_id = ?", userID).First(&shippingDetail).Error; err != nil {
+		response.Error(c, http.StatusBadRequest, "Please add shipping details before placing an order")
+		return
+	}
+
+	// Build order line items, snapshotting the price at order time.
 	totalPrice := 0
-	orderItems := []models.OrderItem{}
+	orderItems := make([]models.OrderItem, 0, len(cart.CartItems))
 	for _, cartItem := range cart.CartItems {
 		totalPrice += cartItem.Product.Price * cartItem.Quantity
 		orderItems = append(orderItems, models.OrderItem{
@@ -42,32 +55,49 @@ func CreateOrder(c *gin.Context) {
 		})
 	}
 
-	// Create the order
 	order := models.Order{
 		UserID:           userID,
 		TotalPrice:       totalPrice,
 		ShippingDetailID: shippingDetail.ID,
 		OrderItems:       orderItems,
 	}
-	if err := initializers.DB.Create(&order).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create order"})
+
+	// Persist the order and clear the cart atomically.
+	err := initializers.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&order).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&models.CartItem{}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to create order")
 		return
 	}
 
-	// Clear the cart
-	initializers.DB.Where("user_id = ?", userID).Delete(&models.CartItem{})
-
-	c.JSON(http.StatusCreated, gin.H{"Message": "Order created successfully", "Order": order})
+	response.JSON(c, http.StatusCreated, gin.H{
+		"message": "Order created successfully",
+		"order":   order,
+	})
 }
 
-// Get all orders for a user
+// GetOrders returns all orders for the authenticated user.
 func GetOrders(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(models.User).ID
-	var orders []models.Order
-	initializers.DB.Preload("OrderItems.Product").Where("user_id = ?", userID).Find(&orders)
 
-	c.JSON(http.StatusOK, gin.H{"Orders": orders})
+	var orders []models.Order
+	if err := initializers.DB.
+		Preload("OrderItems.Product").
+		Where("user_id = ?", userID).
+		Find(&orders).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve orders")
+		return
+	}
+
+	response.JSON(c, http.StatusOK, gin.H{"orders": orders})
 }
 
 // GetOrder returns a single order belonging to the authenticated user.
@@ -75,15 +105,13 @@ func GetOrder(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(models.User).ID
 
-	// Parse and validate the order id from the URL.
 	orderID, err := strconv.ParseUint(c.Param("order_id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		response.Error(c, http.StatusBadRequest, "Invalid order ID")
 		return
 	}
 
-	// Fetch the order directly, scoped to the authenticated user so one user
-	// cannot read another user's order.
+	// Scope to the authenticated user so one user cannot read another's order.
 	var order models.Order
 	result := initializers.DB.
 		Preload("OrderItems.Product").
@@ -92,64 +120,57 @@ func GetOrder(c *gin.Context) {
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+			response.Error(c, http.StatusNotFound, "Order not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve order"})
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve order")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"order": order})
+	response.JSON(c, http.StatusOK, gin.H{"order": order})
 }
 
-// UpdateOrderStatus handles the request to update an order's status
+// UpdateOrderStatus updates an order's status (intended for admin use once
+// wired into an admin-only route).
 func UpdateOrderStatus(c *gin.Context) {
-	// Fetch the order using the order_id from the URL parameters
 	var order models.Order
 	if err := initializers.DB.Where("id = ?", c.Param("order_id")).First(&order).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.Error(c, http.StatusNotFound, "Order not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "Failed to look up order")
 		return
 	}
 
-	// Bind the request body to get the new status
 	var body struct {
 		Status models.OrderStatus `json:"status" binding:"required"`
 	}
-
-	if err := c.BindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request body: a status is required")
 		return
 	}
 
-	// Validate the new status
-	validStatuses := []models.OrderStatus{
-		models.OrderPending,
-		models.OrderProcessed,
-		models.OrderShipped,
-		models.OrderDelivered,
-		models.OrderCancelled,
+	validStatuses := map[models.OrderStatus]bool{
+		models.OrderPending:   true,
+		models.OrderProcessed: true,
+		models.OrderShipped:   true,
+		models.OrderDelivered: true,
+		models.OrderCancelled: true,
 	}
-
-	isValidStatus := false
-	for _, status := range validStatuses {
-		if body.Status == status {
-			isValidStatus = true
-			break
-		}
-	}
-
-	if !isValidStatus {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order status"})
+	if !validStatuses[body.Status] {
+		response.Error(c, http.StatusBadRequest, "Invalid order status")
 		return
 	}
 
-	// Update the order status
 	order.Status = string(body.Status)
 	if err := initializers.DB.Save(&order).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
+		response.Error(c, http.StatusInternalServerError, "Failed to update order status")
 		return
 	}
 
-	// Respond with a success message
-	c.JSON(http.StatusOK, gin.H{"message": "Order status updated successfully", "order": order})
+	response.JSON(c, http.StatusOK, gin.H{
+		"message": "Order status updated successfully",
+		"order":   order,
+	})
 }

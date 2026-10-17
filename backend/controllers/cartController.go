@@ -1,251 +1,184 @@
 package controllers
 
 import (
+	"errors"
+	"net/http"
+
 	"gas-shop/initializers"
 	"gas-shop/models"
-	"net/http"
+	"gas-shop/response"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-// func CreateCart(c *gin.Context) {
-// 	var body struct {
-// 		CartItems []models.CartItem
-// 	}
-
-// 	if c.Bind(&body) != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"Error": "Failed to read body",
-// 		})
-// 		return
-// 	}
-
-// 	// Get the user's id to add the cart to
-// 	user, _ := c.Get("user")
-
-// 	cart := models.Cart{
-// 		UserID: user.(models.User).ID,
-// 	}
-
-// 	result := initializers.DB.Create(&cart)
-
-// 	if result.Error != nil {
-// 		c.Status(400)
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusCreated, gin.H{
-// 		"My New Cart": cart,
-// 	})
-// }
-
+// AddItemToCart adds a product to the authenticated user's cart, or increments
+// the quantity if it is already present.
 func AddItemToCart(c *gin.Context) {
-	// Assuming user is authenticated
 	user, exists := c.Get("user")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "User not authenticated"})
+		response.Error(c, http.StatusUnauthorized, "User not authenticated")
 		return
 	}
-
 	userID := user.(models.User).ID
 
-	// Parse the request body
 	var body struct {
-		ProductID uint `json:"ProductID"`
-		Quantity  int  `json:"Quantity"`
+		ProductID uint `json:"productId" binding:"required"`
+		Quantity  int  `json:"quantity" binding:"required,gt=0"`
 	}
-
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Invalid request data", "Detail": err.Error()})
+		response.Error(c, http.StatusBadRequest, "Invalid request body: a productId and a quantity greater than 0 are required")
 		return
 	}
 
-	// Find or create the cart for this user
+	// Find or create the cart for this user.
 	var cart models.Cart
 	if err := initializers.DB.FirstOrCreate(&cart, models.Cart{UserID: userID}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to find or create a cart", "Detail": err.Error()})
+		response.Error(c, http.StatusInternalServerError, "Failed to access cart")
 		return
 	}
 
-	// Check if the product exists
+	// Ensure the product exists.
 	var product models.Product
 	if err := initializers.DB.First(&product, body.ProductID).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Product not found"})
-		return
-	}
-
-	// Check if the cart item already exists for this product
-	var cartItem models.CartItem
-	if err := initializers.DB.First(&cartItem, "cart_id = ? AND product_id = ?", cart.ID, body.ProductID).Error; err != nil {
-		if gorm.ErrRecordNotFound == err {
-			// Item does not exist in cart, create new one
-			cartItem = models.CartItem{
-				CartID:    cart.ID,
-				ProductID: body.ProductID,
-				Quantity:  body.Quantity,
-				UserID:    userID, // Make sure UserID is set
-			}
-
-			if err := initializers.DB.Create(&cartItem).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to add item to cart", "Detail": err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusCreated, gin.H{"Message": "Item added to cart"})
-			return
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to check cart items", "Detail": err.Error()})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.Error(c, http.StatusNotFound, "Product not found")
 			return
 		}
-	}
-
-	// If item already exists, update the quantity
-	cartItem.Quantity += body.Quantity
-	if err := initializers.DB.Save(&cartItem).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to update cart item quantity", "Detail": err.Error()})
+		response.Error(c, http.StatusInternalServerError, "Failed to look up product")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"Message": "Cart item updated"})
+	// If the item is already in the cart, increment its quantity.
+	var cartItem models.CartItem
+	err := initializers.DB.First(&cartItem, "cart_id = ? AND product_id = ?", cart.ID, body.ProductID).Error
+	switch {
+	case err == nil:
+		cartItem.Quantity += body.Quantity
+		if err := initializers.DB.Save(&cartItem).Error; err != nil {
+			response.Error(c, http.StatusInternalServerError, "Failed to update cart item")
+			return
+		}
+		response.JSON(c, http.StatusOK, gin.H{"message": "Cart item updated", "cartItem": cartItem})
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		cartItem = models.CartItem{
+			CartID:    cart.ID,
+			ProductID: body.ProductID,
+			Quantity:  body.Quantity,
+			UserID:    userID,
+		}
+		if err := initializers.DB.Create(&cartItem).Error; err != nil {
+			response.Error(c, http.StatusInternalServerError, "Failed to add item to cart")
+			return
+		}
+		response.JSON(c, http.StatusCreated, gin.H{"message": "Item added to cart", "cartItem": cartItem})
+	default:
+		response.Error(c, http.StatusInternalServerError, "Failed to check cart items")
+	}
 }
 
-// List items in the cart
-
+// ListCartItems returns the items in a cart with their products.
 func ListCartItems(c *gin.Context) {
 	cartID := c.Param("id")
 
 	var cartItems []models.CartItem
-
-	resultItems := initializers.DB.Where("cart_id = ?", cartID).Preload("Product").Find(&cartItems)
-
-	if resultItems.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"Error": "Cart items not found",
-		})
+	if err := initializers.DB.Where("cart_id = ?", cartID).Preload("Product").Find(&cartItems).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve cart items")
 		return
 	}
+
 	totalPrice := 0
 	for _, item := range cartItems {
 		totalPrice += item.Product.Price * item.Quantity
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"CartItems": cartItems,
-		// "Total Price": totalPrice,
-	})
+	response.JSON(c, http.StatusOK, gin.H{"cartItems": cartItems, "totalPrice": totalPrice})
 }
 
-// Rmove an item from cart
+// RemoveItemFromCart removes a single product from a cart.
 func RemoveItemFromCart(c *gin.Context) {
 	cartID := c.Param("id")
 	productID := c.Param("product_id")
 
 	var cartItem models.CartItem
-
-	resultItem := initializers.DB.Where("cart_id = ? AND product_id = ?", cartID, productID).First(&cartItem)
-
-	if resultItem.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Cart item not found",
-		})
+	if err := initializers.DB.Where("cart_id = ? AND product_id = ?", cartID, productID).First(&cartItem).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.Error(c, http.StatusNotFound, "Cart item not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "Failed to look up cart item")
 		return
 	}
 
-	result := initializers.DB.Delete(&cartItem)
-
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to remove item from cart",
-		})
+	if err := initializers.DB.Delete(&cartItem).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to remove item from cart")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Item removed from cart",
-	})
+	response.JSON(c, http.StatusOK, gin.H{"message": "Item removed from cart"})
 }
 
-// Update the Quantity of a Cart Item
+// UpdateCartItemQuantity sets the quantity of a product in a cart.
 func UpdateCartItemQuantity(c *gin.Context) {
 	cartID := c.Param("id")
 	productID := c.Param("product_id")
 
 	var body struct {
-		Quantity int `json:"quantity"`
+		Quantity int `json:"quantity" binding:"required,gt=0"`
 	}
-	if c.Bind(&body) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to read request body",
-		})
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid request body: a quantity greater than 0 is required")
 		return
 	}
 
 	var cartItem models.CartItem
 	if err := initializers.DB.Where("cart_id = ? AND product_id = ?", cartID, productID).First(&cartItem).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Cart item not found",
-		})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.Error(c, http.StatusNotFound, "Cart item not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "Failed to look up cart item")
 		return
 	}
 
-	// Update the quantity
 	cartItem.Quantity = body.Quantity
 	if err := initializers.DB.Save(&cartItem).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to update cart item quantity",
-		})
+		response.Error(c, http.StatusInternalServerError, "Failed to update cart item quantity")
 		return
 	}
 
-	// Preload the associated Product data
+	// Reload with product data for the response.
 	initializers.DB.Preload("Product").First(&cartItem, cartItem.ID)
 
-	c.JSON(http.StatusOK, gin.H{
-		"CartItem": cartItem,
-	})
+	response.JSON(c, http.StatusOK, gin.H{"cartItem": cartItem})
 }
 
-// Clear the items in the Cart
+// ClearCart removes all items from a cart.
 func ClearCart(c *gin.Context) {
 	cartID := c.Param("id")
 
-	result := initializers.DB.Where("cart_id = ?", cartID).Delete(&models.CartItem{})
-
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "Failed to clear cart",
-		})
+	if err := initializers.DB.Where("cart_id = ?", cartID).Delete(&models.CartItem{}).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to clear cart")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"Message": "Cart cleared",
-	})
+	response.JSON(c, http.StatusOK, gin.H{"message": "Cart cleared"})
 }
 
-// Review cart totals and details before going to checkout
-
+// ReviewCart returns cart items plus the computed total before checkout.
 func ReviewCart(c *gin.Context) {
 	cartID := c.Param("id")
 
 	var cartItems []models.CartItem
-
-	resultItems := initializers.DB.Where("cart_id = ?", cartID).Preload("Product").Find(&cartItems)
-
-	if resultItems.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"Error": "Cart items not found",
-		})
+	if err := initializers.DB.Where("cart_id = ?", cartID).Preload("Product").Find(&cartItems).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve cart items")
 		return
 	}
+
 	totalPrice := 0
 	for _, item := range cartItems {
 		totalPrice += item.Product.Price * item.Quantity
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"CartItems":  cartItems,
-		"TotalPrice": totalPrice,
-	})
+	response.JSON(c, http.StatusOK, gin.H{"cartItems": cartItems, "totalPrice": totalPrice})
 }
