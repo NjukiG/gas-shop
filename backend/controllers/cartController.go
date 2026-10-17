@@ -12,15 +12,24 @@ import (
 	"gorm.io/gorm"
 )
 
+// authUserID returns the authenticated user's ID from the Gin context.
+// RequireAuth guarantees "user" is present on all cart routes.
+func authUserID(c *gin.Context) uint {
+	user, _ := c.Get("user")
+	return user.(models.User).ID
+}
+
+// findOrCreateCart returns the authenticated user's cart, creating one if needed.
+func findOrCreateCart(userID uint) (models.Cart, error) {
+	var cart models.Cart
+	err := initializers.DB.FirstOrCreate(&cart, models.Cart{UserID: userID}).Error
+	return cart, err
+}
+
 // AddItemToCart adds a product to the authenticated user's cart, or increments
 // the quantity if it is already present.
 func AddItemToCart(c *gin.Context) {
-	user, exists := c.Get("user")
-	if !exists {
-		response.Error(c, http.StatusUnauthorized, "User not authenticated")
-		return
-	}
-	userID := user.(models.User).ID
+	userID := authUserID(c)
 
 	var body struct {
 		ProductID uint `json:"productId" binding:"required"`
@@ -31,9 +40,8 @@ func AddItemToCart(c *gin.Context) {
 		return
 	}
 
-	// Find or create the cart for this user.
-	var cart models.Cart
-	if err := initializers.DB.FirstOrCreate(&cart, models.Cart{UserID: userID}).Error; err != nil {
+	cart, err := findOrCreateCart(userID)
+	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to access cart")
 		return
 	}
@@ -51,16 +59,16 @@ func AddItemToCart(c *gin.Context) {
 
 	// If the item is already in the cart, increment its quantity.
 	var cartItem models.CartItem
-	err := initializers.DB.First(&cartItem, "cart_id = ? AND product_id = ?", cart.ID, body.ProductID).Error
+	lookupErr := initializers.DB.First(&cartItem, "cart_id = ? AND product_id = ?", cart.ID, body.ProductID).Error
 	switch {
-	case err == nil:
+	case lookupErr == nil:
 		cartItem.Quantity += body.Quantity
 		if err := initializers.DB.Save(&cartItem).Error; err != nil {
 			response.Error(c, http.StatusInternalServerError, "Failed to update cart item")
 			return
 		}
 		response.JSON(c, http.StatusOK, gin.H{"message": "Cart item updated", "cartItem": cartItem})
-	case errors.Is(err, gorm.ErrRecordNotFound):
+	case errors.Is(lookupErr, gorm.ErrRecordNotFound):
 		cartItem = models.CartItem{
 			CartID:    cart.ID,
 			ProductID: body.ProductID,
@@ -77,31 +85,38 @@ func AddItemToCart(c *gin.Context) {
 	}
 }
 
-// ListCartItems returns the items in a cart with their products.
+// ListCartItems returns the items in the authenticated user's cart.
 func ListCartItems(c *gin.Context) {
-	cartID := c.Param("id")
+	userID := authUserID(c)
 
-	var cartItems []models.CartItem
-	if err := initializers.DB.Where("cart_id = ?", cartID).Preload("Product").Find(&cartItems).Error; err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to retrieve cart items")
+	cart, err := findOrCreateCart(userID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to access cart")
 		return
 	}
 
-	totalPrice := 0
-	for _, item := range cartItems {
-		totalPrice += item.Product.Price * item.Quantity
+	cartItems, totalPrice, err := loadCartItems(cart.ID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve cart items")
+		return
 	}
 
 	response.JSON(c, http.StatusOK, gin.H{"cartItems": cartItems, "totalPrice": totalPrice})
 }
 
-// RemoveItemFromCart removes a single product from a cart.
+// RemoveItemFromCart removes a single product from the authenticated user's cart.
 func RemoveItemFromCart(c *gin.Context) {
-	cartID := c.Param("id")
+	userID := authUserID(c)
 	productID := c.Param("product_id")
 
+	cart, err := findOrCreateCart(userID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to access cart")
+		return
+	}
+
 	var cartItem models.CartItem
-	if err := initializers.DB.Where("cart_id = ? AND product_id = ?", cartID, productID).First(&cartItem).Error; err != nil {
+	if err := initializers.DB.Where("cart_id = ? AND product_id = ?", cart.ID, productID).First(&cartItem).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, http.StatusNotFound, "Cart item not found")
 			return
@@ -118,9 +133,9 @@ func RemoveItemFromCart(c *gin.Context) {
 	response.JSON(c, http.StatusOK, gin.H{"message": "Item removed from cart"})
 }
 
-// UpdateCartItemQuantity sets the quantity of a product in a cart.
+// UpdateCartItemQuantity sets the quantity of a product in the user's cart.
 func UpdateCartItemQuantity(c *gin.Context) {
-	cartID := c.Param("id")
+	userID := authUserID(c)
 	productID := c.Param("product_id")
 
 	var body struct {
@@ -131,8 +146,14 @@ func UpdateCartItemQuantity(c *gin.Context) {
 		return
 	}
 
+	cart, err := findOrCreateCart(userID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to access cart")
+		return
+	}
+
 	var cartItem models.CartItem
-	if err := initializers.DB.Where("cart_id = ? AND product_id = ?", cartID, productID).First(&cartItem).Error; err != nil {
+	if err := initializers.DB.Where("cart_id = ? AND product_id = ?", cart.ID, productID).First(&cartItem).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, http.StatusNotFound, "Cart item not found")
 			return
@@ -147,17 +168,22 @@ func UpdateCartItemQuantity(c *gin.Context) {
 		return
 	}
 
-	// Reload with product data for the response.
 	initializers.DB.Preload("Product").First(&cartItem, cartItem.ID)
 
 	response.JSON(c, http.StatusOK, gin.H{"cartItem": cartItem})
 }
 
-// ClearCart removes all items from a cart.
+// ClearCart removes all items from the authenticated user's cart.
 func ClearCart(c *gin.Context) {
-	cartID := c.Param("id")
+	userID := authUserID(c)
 
-	if err := initializers.DB.Where("cart_id = ?", cartID).Delete(&models.CartItem{}).Error; err != nil {
+	cart, err := findOrCreateCart(userID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to access cart")
+		return
+	}
+
+	if err := initializers.DB.Where("cart_id = ?", cart.ID).Delete(&models.CartItem{}).Error; err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to clear cart")
 		return
 	}
@@ -167,18 +193,33 @@ func ClearCart(c *gin.Context) {
 
 // ReviewCart returns cart items plus the computed total before checkout.
 func ReviewCart(c *gin.Context) {
-	cartID := c.Param("id")
+	userID := authUserID(c)
 
-	var cartItems []models.CartItem
-	if err := initializers.DB.Where("cart_id = ?", cartID).Preload("Product").Find(&cartItems).Error; err != nil {
+	cart, err := findOrCreateCart(userID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to access cart")
+		return
+	}
+
+	cartItems, totalPrice, err := loadCartItems(cart.ID)
+	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve cart items")
 		return
+	}
+
+	response.JSON(c, http.StatusOK, gin.H{"cartItems": cartItems, "totalPrice": totalPrice})
+}
+
+// loadCartItems returns a cart's items (with products) and the computed total.
+func loadCartItems(cartID uint) ([]models.CartItem, int, error) {
+	var cartItems []models.CartItem
+	if err := initializers.DB.Where("cart_id = ?", cartID).Preload("Product").Find(&cartItems).Error; err != nil {
+		return nil, 0, err
 	}
 
 	totalPrice := 0
 	for _, item := range cartItems {
 		totalPrice += item.Product.Price * item.Quantity
 	}
-
-	response.JSON(c, http.StatusOK, gin.H{"cartItems": cartItems, "totalPrice": totalPrice})
+	return cartItems, totalPrice, nil
 }

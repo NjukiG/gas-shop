@@ -76,11 +76,12 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  // Fetch cart by ID
-  const fetchCartDetails = async (cartId) => {
+  // Fetch the authenticated user's cart (cart is derived from the auth token
+  // on the server, so no id is needed in the URL).
+  const fetchCartDetails = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/${cartId}/review`,
+        `http://localhost:3000/protected/cart/review`,
         {
           method: "GET",
           headers: {
@@ -91,23 +92,22 @@ export const ShopProvider = ({ children }) => {
       );
       const data = await response.json();
 
-      if (data && Array.isArray(data.CartItems)) {
-        setCartItems(data.CartItems); // Correctly set the cart items
-        setCartTotals(data.TotalPrice); // Assuming you have a state for total price
-        console.log(data.CartItems);
+      if (data && Array.isArray(data.cartItems)) {
+        setCartItems(data.cartItems);
+        setCartTotals(data.totalPrice);
       } else {
         console.error("Expected an array but got:", data);
       }
     } catch (error) {
-      console.error(`Failed to fetch product with ID ${cartId}:`, error);
+      console.error("Failed to fetch cart details:", error);
     }
   };
 
-  // function to add items to cart
+  // Add an item to the authenticated user's cart.
   const addItemToCart = async (productId, quantity) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/${user.ID}/items`,
+        `http://localhost:3000/protected/cart/items`,
         {
           method: "POST",
           headers: {
@@ -119,24 +119,22 @@ export const ShopProvider = ({ children }) => {
       );
       const data = await response.json();
       if (response.ok) {
-        // Update cart in context
-        setCartItems(data["CartItem"]);
-        console.log(data);
         toast.success("Item added to cart");
         navigate("/products");
       } else {
-        console.error("Failed to add item:", data.Error);
+        console.error("Failed to add item:", data.error);
+        toast.error(data.error || "Failed to add item to cart");
       }
     } catch (error) {
       console.error("Error:", error);
     }
   };
 
-  // Function to remove an item from the cart
+  // Remove an item from the authenticated user's cart.
   const removeItemFromCart = async (productId) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/${user.ID}/items/${productId}`,
+        `http://localhost:3000/protected/cart/items/${productId}`,
         {
           method: "DELETE",
           headers: {
@@ -145,12 +143,10 @@ export const ShopProvider = ({ children }) => {
         }
       );
       if (response.ok) {
-        // Update cart in context
         const updatedCart = cartItems.filter(
-          (item) => item.productId !== productId
+          (item) => item.ProductID !== productId
         );
         setCartItems(updatedCart);
-        console.log("Removed item", updatedCart);
         toast.error("Item removed from your cart");
         navigate("/products");
       } else {
