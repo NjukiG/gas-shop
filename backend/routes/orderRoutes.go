@@ -11,12 +11,16 @@ func RegisterOrderRoutes(router *gin.Engine) {
 	protectedRoutes := router.Group("/protected")
 	protectedRoutes.Use(middleware.RequireAuth)
 
-	// Order routes
+	// Order routes.
+	//
+	// Orders belong to the authenticated user (resolved from the JWT), so the
+	// routes are modeled directly under /orders rather than nested under a
+	// cart id. This also removes the previous route conflict where two ":id"
+	// params collided on the same path.
 	{
-		protectedRoutes.POST("/cart/:id/orders", controllers.CreateOrder)
-		protectedRoutes.GET("/cart/:id/orders", controllers.GetOrders)
-		protectedRoutes.GET("/cart/:id/orders/:id", controllers.GetOrder)
-		// protectedRoutes.PUT("/orders/:order_id", controllers.UpdateOrderStatus)
-		// protectedRoutes.DELETE("/orders/:order_id", controllers.DeleteOrder)
+		protectedRoutes.POST("/orders", controllers.CreateOrder)
+		protectedRoutes.GET("/orders", controllers.GetOrders)
+		protectedRoutes.GET("/orders/:order_id", controllers.GetOrder)
+		// protectedRoutes.PATCH("/orders/:order_id/status", controllers.UpdateOrderStatus)
 	}
 }

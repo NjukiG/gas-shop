@@ -236,7 +236,7 @@ export const ShopProvider = ({ children }) => {
   const fetchOrders = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/${user.ID}/orders`,
+        `http://localhost:3000/protected/orders`,
         {
           method: "GET",
           headers: {
@@ -257,7 +257,7 @@ export const ShopProvider = ({ children }) => {
   const makeNewOrder = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/${user.ID}/orders`,
+        `http://localhost:3000/protected/orders`,
         {
           method: "POST",
           headers: {

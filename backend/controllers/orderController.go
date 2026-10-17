@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"errors"
 	"gas-shop/initializers"
 	"gas-shop/models"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // CreateOrder creates a new order based on the cart items
@@ -68,84 +70,37 @@ func GetOrders(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"Orders": orders})
 }
 
+// GetOrder returns a single order belonging to the authenticated user.
 func GetOrder(c *gin.Context) {
-	// Extract the order ID from the URL parameters
 	user, _ := c.Get("user")
 	userID := user.(models.User).ID
-	var orders []models.Order
-	result := initializers.DB.Preload("OrderItems.Product").Where("user_id = ?", userID).Find(&orders)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve orders",
-		})
-		return
-	}
-	// Extract the order ID from the URL parameters and convert it to a uint
-	orderIDStr := c.Param("id")
-	orderID, err := strconv.ParseUint(orderIDStr, 10, 32)
+
+	// Parse and validate the order id from the URL.
+	orderID, err := strconv.ParseUint(c.Param("order_id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid order ID",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
 		return
 	}
 
-	// Loop through the user's orders to find the specific order by ID
-	for _, order := range orders {
-		if order.ID == uint(orderID) {
-			c.JSON(http.StatusOK, gin.H{
-				"order": order,
-			})
+	// Fetch the order directly, scoped to the authenticated user so one user
+	// cannot read another user's order.
+	var order models.Order
+	result := initializers.DB.
+		Preload("OrderItems.Product").
+		Where("id = ? AND user_id = ?", uint(orderID), userID).
+		First(&order)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve order"})
+		return
 	}
 
-	// If no matching order is found, return a 404 error
-	c.JSON(http.StatusNotFound, gin.H{
-		"error": "Order not found",
-	})
+	c.JSON(http.StatusOK, gin.H{"order": order})
 }
-
-// Get a single order by ID
-// func GetOrder(c *gin.Context) {
-// 	orderId := c.Param("id")
-// 	user, _ := c.Get("user")
-// 	userID := user.(models.User).ID
-
-// 	var order models.Order
-// 	if err := initializers.DB.Preload("OrderItems.Product").Where("id = ? AND user_id = ?", orderId, userID).First(&order).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"order": order})
-// }
-
-// func ListOrders(c *gin.Context) {
-// 	var user models.User
-// 	if err := initializers.DB.Where("id = ?", c.Param("user_id")).First(&user).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-// 		return
-// 	}
-
-// 	var orders []models.Order
-// 	if err := initializers.DB.Preload("OrderItems.Product").Where("user_id = ?", user.ID).Find(&orders).Error; err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to retrieve orders"})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"orders": orders})
-// }
-
-// func GetOrderDetails(c *gin.Context) {
-// 	var order models.Order
-// 	if err := initializers.DB.Preload("OrderItems.Product").Where("id = ?", c.Param("order_id")).First(&order).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"order": order})
-// }
 
 // UpdateOrderStatus handles the request to update an order's status
 func UpdateOrderStatus(c *gin.Context) {
@@ -198,37 +153,3 @@ func UpdateOrderStatus(c *gin.Context) {
 	// Respond with a success message
 	c.JSON(http.StatusOK, gin.H{"message": "Order status updated successfully", "order": order})
 }
-
-// func UpdateOrderStatus(c *gin.Context) {
-// 	var order models.Order
-// 	if err := initializers.DB.Where("id = ?", c.Param("order_id")).First(&order).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
-// 		return
-// 	}
-
-// 	var body struct {
-// 		Status models.OrderStatus
-// 	}
-
-// 	if err := c.Bind(&body); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-// 		return
-// 	}
-
-// 	order.Status = body.Status
-// 	initializers.DB.Save(&order)
-
-// 	c.JSON(http.StatusOK, gin.H{"message": "Order status updated successfully", "order": order})
-// }
-
-// func DeleteOrder(c *gin.Context) {
-// 	var order models.Order
-// 	if err := initializers.DB.Where("id = ?", c.Param("order_id")).First(&order).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
-// 		return
-// 	}
-
-// 	initializers.DB.Delete(&order)
-
-// 	c.JSON(http.StatusOK, gin.H{"message": "Order deleted successfully"})
-// }
