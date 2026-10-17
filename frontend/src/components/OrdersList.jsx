@@ -28,9 +28,9 @@ const OrdersList = () => {
           <tbody className=" text-sm font-light">
             {orders.map((order) => {
               const id = order.ID;
-              const { OrderItems, Address, Status, TotalPrice, CreatedAt } = order;
-              const { City } = shippingDetails;
-              const formattedPrice = formatPrice(TotalPrice * 100);
+              const { OrderItems, Status, TotalPrice, CreatedAt } = order;
+              const { City } = shippingDetails || {};
+              const formattedPrice = formatPrice(TotalPrice);
 
               return (
                 <tr key={id} className="border-b border-gray-200 hover:bg-gray-100">

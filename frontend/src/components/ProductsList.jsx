@@ -7,9 +7,9 @@ const ProductsGrid = () => {
 
   return (
     <div className="pt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3 ">
-      {products.map((product) => {
-        const { Title, Price, Image, Company, ID } = product;
-        const dollarsAmount = formatPrice(Price * 100);
+      {(products || []).map((product) => {
+        const { Title, Price, Image, Brand, ID } = product;
+        const dollarsAmount = formatPrice(Price);
         return (
           <Link to={`/products/${ID}`} key={ID} className="group relative">
             <div className="aspect-h-1 aspect-w-1 w-full overflow-hidden rounded-md bg-gray-200 lg:aspect-none group-hover:opacity-75 lg:h-80">
@@ -25,7 +25,7 @@ const ProductsGrid = () => {
                   <span aria-hidden="true" className="absolute inset-0" />
                   {Title}
                 </h3>
-                <p className="mt-1 text-sm">{Company}</p>
+                <p className="mt-1 text-sm">{Brand}</p>
               </div>
               <p className="text-sm font-medium">{dollarsAmount}</p>
             </div>

@@ -5,7 +5,7 @@ const CartItem = ({ cartItem }) => {
   const { removeItemFromCart } = useShop();
   const [amount, setAmount] = useState(cartItem.quantity);
 
-  const { ID, Title, Price, Image, Company, Shipping, description, featured } =
+  const { ID, Title, Price, Image, Brand, Shipping, description, featured } =
     cartItem.product;
 
   const handleRemoveItem = () => {
@@ -31,8 +31,8 @@ const CartItem = ({ cartItem }) => {
       <div className="sm:ml-16 sm:w-48">
         {/* TITLE */}
         <h3 className="capitalize font-medium">{Title}</h3>
-        {/* COMPANY */}
-        <h4 className="mt-2 capitalize text-sm">{Company}</h4>
+        {/* BRAND */}
+        <h4 className="mt-2 capitalize text-sm">{Brand}</h4>
       </div>
       <div className="sm:ml-12">
         {/* AMOUNT */}
@@ -65,7 +65,7 @@ const CartItem = ({ cartItem }) => {
 
       {/* PRICE */}
       <p className="font-medium sm:ml-auto">
-        {formatPrice(Price * 100 * cartItem.quantity)}
+        {formatPrice(Price * cartItem.quantity)}
       </p>
     </article>
   );

@@ -23,7 +23,7 @@ const SingleProduct = () => {
     addItemToCart(product.ID, amount);
   };
 
-  const dollarsAmount = formatPrice(product.Price * 100);
+  const dollarsAmount = formatPrice(product.Price);
 
   return (
     <section className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -49,12 +49,34 @@ const SingleProduct = () => {
         <div>
           <h1 className="capitalize text-3xl font-bold">{product.Title}</h1>
           <h4 className="text-xl text-neutral-content font-bold mt-2">
-            {product.Company}
+            {product.Brand}
           </h4>
 
           <p className="mt-3 text-xl">{dollarsAmount}</p>
 
+          {/* FRAGRANCE DETAILS */}
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            {product.size && (
+              <span>
+                <span className="font-medium">Size:</span> {product.size}
+              </span>
+            )}
+            {product.concentration && (
+              <span>
+                <span className="font-medium">Concentration:</span>{" "}
+                {product.concentration}
+              </span>
+            )}
+          </div>
+
           <p className="mt-6 leading-8">{product.description}</p>
+
+          {product.scent_notes && (
+            <p className="mt-4 text-sm leading-7">
+              <span className="font-medium">Scent notes: </span>
+              {product.scent_notes}
+            </p>
+          )}
 
           {/* AMOUNT */}
           <div className="form-control w-full max-w-xs">

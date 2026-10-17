@@ -30,7 +30,7 @@ export const ShopProvider = ({ children }) => {
     try {
       const response = await fetch("http://localhost:3000/public/products");
       const data = await response.json();
-      setProducts(data.Products);
+      setProducts(data.products || []);
     } catch (error) {
       console.error("Failed to fetch products:", error);
     }
@@ -43,8 +43,7 @@ export const ShopProvider = ({ children }) => {
         `http://localhost:3000/public/products/${productId}`
       );
       const data = await response.json();
-      setProduct(data.Product);
-      console.log(data.Product);
+      setProduct(data.product || {});
     } catch (error) {
       console.error(`Failed to fetch product with ID ${productId}:`, error);
     }
@@ -54,7 +53,7 @@ export const ShopProvider = ({ children }) => {
     try {
       const response = await fetch("http://localhost:3000/public/categories");
       const data = await response.json();
-      setCategories(data.Categories);
+      setCategories(data.categories || []);
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     }
@@ -67,7 +66,7 @@ export const ShopProvider = ({ children }) => {
         `http://localhost:3000/public/categories/${categoryId}/products`
       );
       const data = await response.json();
-      setCategoryProducts(data);
+      setCategoryProducts(data.products || []);
     } catch (error) {
       console.error(
         `Failed to fetch products for category with ID ${categoryId}:`,
@@ -195,10 +194,9 @@ export const ShopProvider = ({ children }) => {
         }
       );
       const data = await response.json();
-      console.log(data.ShippingDetails);
-      setShippingDetails(data.ShippingDetails);
+      setShippingDetails(data.shippingDetails || {});
     } catch (error) {
-      console.error("Failed to fetch categories:", error);
+      console.error("Failed to fetch shipping details:", error);
     }
   };
 
@@ -218,9 +216,8 @@ export const ShopProvider = ({ children }) => {
       );
 
       const data = await response.json();
-      console.log(data);
-      setShippingDetails(data);
-      toast.success("Shiiping details updated");
+      setShippingDetails(data.shippingDetails || {});
+      toast.success("Shipping details updated");
       navigate("/checkout");
     } catch (error) {
       console.error(error);
@@ -242,10 +239,9 @@ export const ShopProvider = ({ children }) => {
         }
       );
       const data = await response.json();
-      setOrders(data.Orders);
-      console.log(data.Orders);
+      setOrders(data.orders || []);
     } catch (error) {
-      console.error(`Failed to fetch product with ID ${cartId}:`, error);
+      console.error("Failed to fetch orders:", error);
     }
   };
 
@@ -265,9 +261,7 @@ export const ShopProvider = ({ children }) => {
       );
 
       const data = await response.json();
-      console.log(data.Order);
-      // setOrders(data.Order);
-      toast.success(data.Message);
+      toast.success(data.message || "Order placed successfully");
       navigate("/orders");
     } catch (error) {
       console.error(error);

@@ -8,9 +8,9 @@ const ProductsGrid = () => {
 
   return (
     <div className="pt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3 ">
-      {products.map((product) => {
-        const { Title, Price, Image, featured, Company, ID } = product;
-        const dollarsAmount = formatPrice(Price * 100);
+      {(products || []).map((product) => {
+        const { Title, Price, Image, featured, Brand, ID } = product;
+        const dollarsAmount = formatPrice(Price);
         if (featured === true) {
           return (
             <Link to={`/products/${ID}`} key={ID} className="group relative">
@@ -27,7 +27,7 @@ const ProductsGrid = () => {
                     <span aria-hidden="true" className="absolute inset-0" />
                     {Title}
                   </h3>
-                  <p className="mt-1 text-sm">{Company}</p>
+                  <p className="mt-1 text-sm">{Brand}</p>
                 </div>
                 <p className="text-sm font-medium">{dollarsAmount}</p>
               </div>
