@@ -1,11 +1,10 @@
 package middleware
 
 import (
-	"fmt"
+	"gas-shop/config"
 	"gas-shop/initializers"
 	"gas-shop/models"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 )
 
 func RequireAuth(c *gin.Context) {
-	fmt.Println("In middleware function ...")
-
 	// Get the cookie off req
 	tokenString, err := c.Cookie("Authorization")
 
@@ -32,7 +29,7 @@ func RequireAuth(c *gin.Context) {
 
 	// Decode/validate it
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("SECRET")), nil
+		return []byte(config.Get().JWTSecret), nil
 	})
 
 	if err != nil {

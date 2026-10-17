@@ -1,10 +1,10 @@
 package controllers
 
 import (
+	"gas-shop/config"
 	"gas-shop/initializers"
 	"gas-shop/models"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -105,7 +105,7 @@ func Login(c *gin.Context) {
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
+	tokenString, err := token.SignedString([]byte(config.Get().JWTSecret))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

@@ -1,29 +1,42 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"time"
+
+	"gas-shop/config"
 	"gas-shop/initializers"
 	"gas-shop/routes"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
-func init() {
-	initializers.LoadEnv()
-	initializers.ConnectToDB()
-	initializers.SyncDatabase()
-}
-
 func main() {
-	fmt.Println("Working on my gas-shop application backend!!")
+	// Load and validate configuration up front. Fail fast with a clear
+	// message if anything required is missing.
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("startup: %v", err)
+	}
+	config.Set(cfg)
+
+	// Establish the database connection (verified with a ping) before serving.
+	if err := initializers.ConnectToDB(cfg.DatabaseURL); err != nil {
+		log.Fatalf("startup: %v", err)
+	}
+
+	// Apply schema migrations.
+	if err := initializers.SyncDatabase(); err != nil {
+		log.Fatalf("startup: %v", err)
+	}
 
 	r := gin.Default()
 
-	// Apply CORS middleware
+	// Apply CORS middleware. Allowed origins are configurable so the same
+	// binary works locally and in the cloud.
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"}, // Adjust this as needed
+		AllowOrigins:     cfg.AllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -38,7 +51,9 @@ func main() {
 	routes.RegisterShippingRoutes(r)
 	routes.RegisterOrderRoutes(r)
 
-	r.Run()
+	// Listen on the configured port. This fixes the previous mismatch where
+	// the server defaulted to :8080 while the frontend expected :3000.
+	if err := r.Run(":" + cfg.Port); err != nil {
+		log.Fatalf("server: %v", err)
+	}
 }
-
-// 	Order controlle not working.
