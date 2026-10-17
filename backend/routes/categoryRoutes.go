@@ -17,12 +17,12 @@ func RegisterCategoryRoutes(router *gin.Engine) {
 
 	}
 
-	protectedRoutes := router.Group("/protected")
-	protectedRoutes.Use(middleware.RequireAuth)
+	// Admin-only mutations. Browsing categories is public (above); creating
+	// them requires an authenticated admin.
+	adminRoutes := router.Group("/protected")
+	adminRoutes.Use(middleware.RequireAuth, middleware.AdminOnly())
 
 	{
-		protectedRoutes.POST("/categories", controllers.CreateCategory)
-		// protectedRoutes.PUT("/categories/:id", controllers.UpdateCategory)
-		// protectedRoutes.DELETE("/categories/:id", controllers.DeleteCategory)
+		adminRoutes.POST("/categories", controllers.CreateCategory)
 	}
 }

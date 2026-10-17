@@ -16,7 +16,6 @@ import (
 func RegisterUser(c *gin.Context) {
 	var body struct {
 		FullName string
-		Role     models.Role
 		Email    string
 		Password string
 	}
@@ -37,10 +36,13 @@ func RegisterUser(c *gin.Context) {
 		})
 		return
 	}
-	// Create a new User
+
+	// Create a new user. The role is always Buyer for public self-registration;
+	// it is intentionally NOT taken from the request body so a user cannot
+	// escalate themselves to Admin. Admin accounts are provisioned separately.
 	user := models.User{
 		FullName: body.FullName,
-		Role:     body.Role,
+		Role:     models.RoleBuyer,
 		Email:    body.Email,
 		Password: string(hash),
 	}

@@ -19,14 +19,14 @@ func RegisterProductRoutes(router *gin.Engine) {
 
 	}
 
-	protectedRoutes := router.Group("/protected")
-	protectedRoutes.Use(middleware.RequireAuth)
+	// Admin-only mutations. Browsing products is public (above); creating,
+	// updating and deleting them requires an authenticated admin.
+	adminRoutes := router.Group("/protected")
+	adminRoutes.Use(middleware.RequireAuth, middleware.AdminOnly())
 
 	{
-		protectedRoutes.POST("/categories/:id/products", controllers.CreateProduct)
-		protectedRoutes.PUT("/products/:id", controllers.UpdateProduct)
-		protectedRoutes.DELETE("/products/:id", controllers.DeleteProduct)
-
+		adminRoutes.POST("/categories/:id/products", controllers.CreateProduct)
+		adminRoutes.PUT("/products/:id", controllers.UpdateProduct)
+		adminRoutes.DELETE("/products/:id", controllers.DeleteProduct)
 	}
-
 }
