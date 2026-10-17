@@ -26,15 +26,28 @@ type Category struct {
 	Products []Product `gorm:"foreignKey:CategoryID"`
 }
 
+// Concentration is the fragrance strength classification.
+type Concentration string
+
+const (
+	ConcentrationParfum  Concentration = "Parfum"       // Extrait de Parfum, strongest
+	ConcentrationEDP     Concentration = "Eau de Parfum"
+	ConcentrationEDT     Concentration = "Eau de Toilette"
+	ConcentrationEDC     Concentration = "Eau de Cologne"
+)
+
 type Product struct {
 	gorm.Model
-	Title       string `gorm:"not null"`
-	Company     string `gorm:"not null"`
-	Description string `json:"description"`
-	Featured    bool   `json:"featured"`
-	Image       string `gorm:"not null"`
-	Price       int    `gorm:"not null"`
-	Shipping    bool   `gorm:"not null"`
+	Title       string        `gorm:"not null"`                 // fragrance name
+	Brand       string        `gorm:"not null"`                 // e.g. Dior, Chanel
+	Description string        `json:"description"`
+	Featured    bool          `json:"featured"`
+	Image       string        `gorm:"not null"`
+	Price       int           `gorm:"not null"`                 // in cents
+	Shipping    bool          `gorm:"not null"`
+	Size        string        `json:"size"`                     // e.g. "50ml", "100ml"
+	Concentration Concentration `json:"concentration"`          // EDT / EDP / Parfum / Cologne
+	ScentNotes  string        `json:"scent_notes"`              // top/heart/base notes
 	CategoryID  uint
 }
 

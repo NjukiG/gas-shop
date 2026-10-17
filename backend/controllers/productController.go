@@ -14,13 +14,16 @@ import (
 
 // productBody is the accepted payload for creating or updating a product.
 type productBody struct {
-	Title       string `json:"Title" binding:"required"`
-	Company     string `json:"Company" binding:"required"`
-	Description string `json:"Description"`
-	Featured    bool   `json:"Featured"`
-	Image       string `json:"Image"`
-	Price       int    `json:"Price" binding:"required,gt=0"`
-	Shipping    bool   `json:"Shipping"`
+	Title         string               `json:"Title" binding:"required"`
+	Brand         string               `json:"Brand" binding:"required"`
+	Description   string               `json:"Description"`
+	Featured      bool                 `json:"Featured"`
+	Image         string               `json:"Image"`
+	Price         int                  `json:"Price" binding:"required,gt=0"`
+	Shipping      bool                 `json:"Shipping"`
+	Size          string               `json:"Size"`
+	Concentration models.Concentration `json:"Concentration"`
+	ScentNotes    string               `json:"ScentNotes"`
 }
 
 // CreateProduct creates a product within a category (admin only).
@@ -39,19 +42,22 @@ func CreateProduct(c *gin.Context) {
 
 	var body productBody
 	if err := c.ShouldBindJSON(&body); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid request body: title, company and a price greater than 0 are required")
+		response.Error(c, http.StatusBadRequest, "Invalid request body: title, brand and a price greater than 0 are required")
 		return
 	}
 
 	product := models.Product{
-		Title:       body.Title,
-		Company:     body.Company,
-		Description: body.Description,
-		Featured:    body.Featured,
-		Image:       body.Image,
-		Price:       body.Price,
-		Shipping:    body.Shipping,
-		CategoryID:  category.ID,
+		Title:         body.Title,
+		Brand:         body.Brand,
+		Description:   body.Description,
+		Featured:      body.Featured,
+		Image:         body.Image,
+		Price:         body.Price,
+		Shipping:      body.Shipping,
+		Size:          body.Size,
+		Concentration: body.Concentration,
+		ScentNotes:    body.ScentNotes,
+		CategoryID:    category.ID,
 	}
 
 	if result := initializers.DB.Create(&product); result.Error != nil {
@@ -121,20 +127,23 @@ func UpdateProduct(c *gin.Context) {
 
 	var body productBody
 	if err := c.ShouldBindJSON(&body); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid request body: title, company and a price greater than 0 are required")
+		response.Error(c, http.StatusBadRequest, "Invalid request body: title, brand and a price greater than 0 are required")
 		return
 	}
 
 	// Use a map so all provided fields are applied, including boolean fields
 	// set to false (GORM's struct Updates would skip zero values).
 	updates := map[string]interface{}{
-		"title":       body.Title,
-		"company":     body.Company,
-		"description": body.Description,
-		"featured":    body.Featured,
-		"image":       body.Image,
-		"price":       body.Price,
-		"shipping":    body.Shipping,
+		"title":         body.Title,
+		"brand":         body.Brand,
+		"description":   body.Description,
+		"featured":      body.Featured,
+		"image":         body.Image,
+		"price":         body.Price,
+		"shipping":      body.Shipping,
+		"size":          body.Size,
+		"concentration": body.Concentration,
+		"scent_notes":   body.ScentNotes,
 	}
 
 	if err := initializers.DB.Model(&product).Updates(updates).Error; err != nil {
