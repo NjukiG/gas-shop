@@ -82,14 +82,17 @@ func UpdateShippingDetails(c *gin.Context) {
 		return
 	}
 
+	// Upsert: find the user's existing details, or create a new record if this
+	// is their first time. This lets the client use a single endpoint without
+	// tracking whether details already exist.
 	var shippingDetail models.ShippingDetail
 	if err := initializers.DB.Where("user_id = ?", userID).First(&shippingDetail).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			response.Error(c, http.StatusNotFound, "Shipping details not found")
+			shippingDetail = models.ShippingDetail{UserID: userID}
+		} else {
+			response.Error(c, http.StatusInternalServerError, "Failed to look up shipping details")
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, "Failed to look up shipping details")
-		return
 	}
 
 	shippingDetail.Address = body.Address

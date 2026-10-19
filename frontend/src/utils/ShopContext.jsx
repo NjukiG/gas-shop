@@ -240,7 +240,8 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  // Update Shipping details
+  // Save/update shipping details (backend upserts). Returns true on success so
+  // callers (e.g. checkout) can decide whether to proceed. Does NOT navigate.
   const updateShippingDetails = async (details) => {
     try {
       const response = await fetch(
@@ -256,12 +257,16 @@ export const ShopProvider = ({ children }) => {
       );
 
       const data = await response.json();
-      setShippingDetails(data.shippingDetails || {});
-      toast.success("Shipping details updated");
-      navigate("/checkout");
+      if (response.ok) {
+        setShippingDetails(data.shippingDetails || {});
+        return true;
+      }
+      toast.error(data.error || "Please double check your details");
+      return false;
     } catch (error) {
       console.error(error);
       toast.error("Please double check your details");
+      return false;
     }
   };
 
@@ -285,7 +290,8 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  // Make and order
+  // Place an order from the current cart. On success, clears local cart state
+  // (the backend empties the cart) so stale items don't reappear.
   const makeNewOrder = async () => {
     try {
       const response = await fetch(
@@ -296,15 +302,23 @@ export const ShopProvider = ({ children }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(),
         }
       );
 
       const data = await response.json();
-      toast.success(data.message || "Order placed successfully");
-      navigate("/orders");
+      if (response.ok) {
+        // Backend cleared the cart; mirror that in local state.
+        setCartItems([]);
+        setCartTotals(0);
+        setCartSummary({ subtotal: 0, shipping: 0, tax: 0, total: 0 });
+        toast.success(data.message || "Order placed successfully");
+        navigate("/orders");
+      } else {
+        toast.error(data.error || "Failed to place order");
+      }
     } catch (error) {
       console.error(error);
+      toast.error("Failed to place order");
     }
   };
 
