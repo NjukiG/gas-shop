@@ -131,7 +131,8 @@ export const ShopProvider = ({ children }) => {
       const data = await response.json();
       if (response.ok) {
         toast.success("Item added to cart");
-        navigate("/products");
+        // Refresh cart state so the navbar badge updates immediately.
+        await fetchCartDetails();
       } else {
         console.error("Failed to add item:", data.error);
         toast.error(data.error || "Failed to add item to cart");
@@ -322,13 +323,23 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  // Fetch products and categories on initial render
+  // Fetch products and categories on initial render.
   useEffect(() => {
-    // if (!token) throw new Error("No token found");
     fetchProducts();
     fetchCategories();
-    // fetchShippingDetails();
   }, []);
+
+  // Keep the cart (and the navbar badge) in sync with auth state: load the
+  // user's cart when they log in / on reload, clear it when logged out.
+  useEffect(() => {
+    if (user) {
+      fetchCartDetails();
+    } else {
+      setCartItems([]);
+      setCartTotals(0);
+      setCartSummary({ subtotal: 0, shipping: 0, tax: 0, total: 0 });
+    }
+  }, [user]);
 
   // Value to pass to the provider
   const value = {
