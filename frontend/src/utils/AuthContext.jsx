@@ -14,6 +14,7 @@ export const AuthProvider = ({ children }) => {
     checkUserStatus();
   }, []);
 
+  // Register a new account. Returns true on success so the caller can redirect.
   const registerUser = async (userData) => {
     try {
       const response = await fetch("http://localhost:3000/public/register", {
@@ -25,13 +26,22 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
-      console.log(data.Message);
-      toast.success(data.Message);
+      if (response.ok) {
+        toast.success(data.message || "Account created successfully");
+        return { ok: true };
+      }
+      const message = data.error || "Could not create account";
+      toast.error(message);
+      return { ok: false, error: message };
     } catch (error) {
       console.error("Register user error:", error);
+      const message = "Something went wrong. Please try again.";
+      toast.error(message);
+      return { ok: false, error: message };
     }
   };
 
+  // Log in. Returns true on success so the caller can redirect.
   const loginUser = async (credentials) => {
     try {
       const response = await fetch("http://localhost:3000/public/login", {
@@ -43,17 +53,22 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        const message = data.error || "Please double check your credentials";
+        toast.error(message);
+        return { ok: false, error: message };
+      }
+
       localStorage.setItem("token", data.token);
       await checkUserStatus();
-      console.log(data);
       toast.success("Logged in successfully");
-      navigate("/cart");
+      navigate("/");
+      return { ok: true };
     } catch (error) {
-      console.error(
-        "Login user error:",
-        error || "Please double check your credentials"
-      );
-      toast.error("Please double check your credentials");
+      console.error("Login user error:", error);
+      const message = "Please double check your credentials";
+      toast.error(message);
+      return { ok: false, error: message };
     }
   };
 

@@ -1,98 +1,87 @@
-import { useEffect, useRef } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../utils/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 const Login = () => {
-  const loginForm = useRef(null);
-
   const navigate = useNavigate();
   const { user, loginUser } = useAuth();
+  const [form, setForm] = useState({ Email: "", Password: "" });
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
+    if (user) navigate("/");
   }, [navigate, user]);
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    const Email = loginForm.current.Email.value;
-    const Password = loginForm.current.Password.value;
-    const userInfo = { Email, Password };
-    loginUser(userInfo);
+  const handleChange = (e) => {
+    setError("");
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    const result = await loginUser(form);
+    if (result && !result.ok) {
+      setError(result.error);
+    }
+  };
+
   return (
-    <section className="">
-      <div className=" lg:min-h-screen lg:grid-cols-12">
-        <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:col-span-7 lg:px-16 lg:py-12 xl:col-span-6">
-          <div className="max-w-xl lg:max-w-3xl">
-            <div className="flex justify-center mx-auto">
-              <NavLink
-                to="/"
-                className="lg:flex btn btn-primary text-3xl items-center "
-              >
-                G
-              </NavLink>
+    <section className="section-block flex justify-center">
+      <div className="w-full max-w-md">
+        {/* Brand */}
+        <Link
+          to="/"
+          className="block text-center font-display text-2xl font-bold tracking-tightest text-fog mb-2"
+        >
+          SCENT<span className="text-platinum">CITY</span>
+        </Link>
+        <p className="text-center brand-eyebrow mb-8">Welcome back</p>
+
+        <form onSubmit={handleLogin} className="brand-card p-8 space-y-5">
+          {error && (
+            <div className="rounded-btn border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+              {error}
             </div>
+          )}
 
-            <form
-              action="#"
-              method="POST"
-              ref={loginForm}
-              onSubmit={handleLogin}
-              className="mt-8 grid grid-cols-6 gap-6"
-            >
-              <div className="col-span-6">
-                <label htmlFor="Email" className="block text-sm font-medium">
-                  Email
-                </label>
-
-                <input
-                  type="email"
-                  id="Email"
-                  name="email"
-                  className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                />
-              </div>
-
-              <div className="col-span-6">
-                <label
-                  htmlFor="Password"
-                  className="block text-sm font-medium "
-                >
-                  Password
-                </label>
-
-                <input
-                  type="password"
-                  id="Password"
-                  name="password"
-                  className="mt-1 w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                />
-              </div>
-
-              <div className="col-span-6 sm:flex sm:items-center sm:gap-4">
-                <button
-                  type="submit"
-                  className="inline-block shrink-0 rounded-md border border-blue-600 bg-blue-600 px-12 py-3 text-sm font-medium text-white transition hover:bg-transparent hover:text-blue-600 focus:outline-none focus:ring active:text-blue-500 dark:hover:bg-blue-700 dark:hover:text-white"
-                >
-                  Login
-                </button>
-
-                <p className="mt-4 text-sm ">
-                  Dont have an account?
-                  <a
-                    href="/register"
-                    className="text-gray-500 underline dark:text-gray-500"
-                  >
-                    Log in
-                  </a>
-                  .
-                </p>
-              </div>
-            </form>
+          <div>
+            <label htmlFor="Email" className="brand-eyebrow block mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              id="Email"
+              name="Email"
+              value={form.Email}
+              onChange={handleChange}
+              required
+              className="w-full rounded-btn bg-onyx border border-graphite px-4 py-3 text-sm text-fog placeholder-ash focus:border-platinum focus:outline-none transition-colors"
+            />
           </div>
-        </main>
+
+          <div>
+            <label htmlFor="Password" className="brand-eyebrow block mb-2">
+              Password
+            </label>
+            <PasswordInput
+              value={form.Password}
+              onChange={handleChange}
+            />
+          </div>
+
+          <button type="submit" className="brand-btn w-full">
+            Log in
+          </button>
+
+          <p className="text-center text-sm text-ash">
+            Don&apos;t have an account?{" "}
+            <Link to="/register" className="text-platinum hover:underline">
+              Create one
+            </Link>
+          </p>
+        </form>
       </div>
     </section>
   );
