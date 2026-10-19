@@ -2,110 +2,103 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatPrice } from "../utils/index";
 import { useShop } from "../utils/ShopContext";
+import QuantityStepper from "../components/QuantityStepper";
 
 const SingleProduct = () => {
   const { ID } = useParams();
-
   const { product, fetchProductById, addItemToCart } = useShop();
-  console.log(product);
+  const [amount, setAmount] = useState(1);
 
   useEffect(() => {
     fetchProductById(ID);
   }, [ID]);
 
-  const [amount, setAmount] = useState(1);
-
-  const handleAmount = (e) => {
-    setAmount(parseInt(e.target.value));
-  };
-
   const handleAddItem = () => {
     addItemToCart(product.ID, amount);
   };
 
-  const dollarsAmount = formatPrice(product.Price);
+  // Guard against the first render before the product has loaded.
+  if (!product || !product.ID) {
+    return (
+      <div className="section-block">
+        <p className="text-ash">Loading fragrance…</p>
+      </div>
+    );
+  }
 
   return (
-    <section className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <div className="text-md breadcrumbs">
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/products">Products</Link>
-          </li>
-        </ul>
-      </div>
+    <section className="section-block">
+      {/* BREADCRUMBS */}
+      <nav className="text-sm text-ash">
+        <Link to="/" className="hover:text-platinum transition-colors">
+          Home
+        </Link>
+        <span className="mx-2 text-graphite">/</span>
+        <Link to="/products" className="hover:text-platinum transition-colors">
+          Shop
+        </Link>
+        <span className="mx-2 text-graphite">/</span>
+        <span className="text-fog">{product.Title}</span>
+      </nav>
+
       {/* PRODUCT */}
-      <div className="mt-6 grid gap-y-8 lg:grid-cols-2 lg:gap-x-16">
+      <div className="mt-10 grid gap-10 lg:grid-cols-2 lg:gap-16">
         {/* IMAGE */}
-        <img
-          src={product.Image}
-          alt={product.Title}
-          className="w-96 h-96 object-cover rounded-lg lg:w-full  "
-        />
-        {/* PRODUCT INFO */}
+        <div className="brand-card overflow-hidden">
+          <img
+            src={product.Image}
+            alt={product.Title}
+            className="w-full aspect-square object-cover"
+          />
+        </div>
+
+        {/* INFO */}
         <div>
-          <h1 className="capitalize text-3xl font-bold">{product.Title}</h1>
-          <h4 className="text-xl text-neutral-content font-bold mt-2">
-            {product.Brand}
-          </h4>
+          <p className="brand-eyebrow mb-2">{product.Brand}</p>
+          <h1 className="brand-heading text-4xl">{product.Title}</h1>
 
-          <p className="mt-3 text-xl">{dollarsAmount}</p>
+          <p className="mt-4 font-display text-2xl font-semibold text-platinum">
+            {formatPrice(product.Price)}
+          </p>
 
-          {/* FRAGRANCE DETAILS */}
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            {product.size && (
-              <span>
-                <span className="font-medium">Size:</span> {product.size}
-              </span>
-            )}
-            {product.concentration && (
-              <span>
-                <span className="font-medium">Concentration:</span>{" "}
-                {product.concentration}
-              </span>
-            )}
-          </div>
+          {/* FRAGRANCE META */}
+          {(product.size || product.concentration) && (
+            <div className="mt-6 flex flex-wrap gap-3">
+              {product.concentration && (
+                <span className="rounded-btn border border-graphite px-3 py-1 text-xs uppercase tracking-wider text-ash">
+                  {product.concentration}
+                </span>
+              )}
+              {product.size && (
+                <span className="rounded-btn border border-graphite px-3 py-1 text-xs uppercase tracking-wider text-ash">
+                  {product.size}
+                </span>
+              )}
+            </div>
+          )}
 
-          <p className="mt-6 leading-8">{product.description}</p>
+          {product.description && (
+            <p className="mt-6 leading-8 text-ash">{product.description}</p>
+          )}
 
+          {/* SCENT NOTES */}
           {product.scent_notes && (
-            <p className="mt-4 text-sm leading-7">
-              <span className="font-medium">Scent notes: </span>
-              {product.scent_notes}
-            </p>
+            <div className="mt-6 brand-card p-5">
+              <p className="brand-eyebrow mb-2">Scent notes</p>
+              <p className="text-sm leading-7 text-fog">{product.scent_notes}</p>
+            </div>
           )}
 
           {/* AMOUNT */}
-          <div className="form-control w-full max-w-xs">
-            <label className="label">
-              <h4 className="text-md font-medium tracking-wider capitalize">
-                Amount
-              </h4>
-            </label>
-            <select
-              className="select select-secondary select-bordered select-md"
-              value={amount}
-              onChange={handleAmount}
-            >
-              <option value={1}>1</option>
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-              <option value={5}>5</option>
-            </select>
+          <div className="mt-8">
+            <label className="brand-eyebrow block mb-2">Quantity</label>
+            <QuantityStepper value={amount} onChange={setAmount} />
           </div>
-          {/* CART BUTTON */}
-          <div className="mt-10 ">
-            <button
-              className="btn btn-secondary btn-md"
-              onClick={handleAddItem}
-            >
-              Add to cart
-            </button>
-          </div>
+
+          {/* ADD TO CART */}
+          <button className="brand-btn mt-8" onClick={handleAddItem}>
+            Add to cart · {formatPrice(product.Price * amount)}
+          </button>
         </div>
       </div>
     </section>

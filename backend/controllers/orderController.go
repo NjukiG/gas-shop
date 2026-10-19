@@ -7,6 +7,7 @@ import (
 
 	"gas-shop/initializers"
 	"gas-shop/models"
+	"gas-shop/pricing"
 	"gas-shop/response"
 
 	"github.com/gin-gonic/gin"
@@ -44,10 +45,10 @@ func CreateOrder(c *gin.Context) {
 	}
 
 	// Build order line items, snapshotting the price at order time.
-	totalPrice := 0
+	subtotal := 0
 	orderItems := make([]models.OrderItem, 0, len(cart.CartItems))
 	for _, cartItem := range cart.CartItems {
-		totalPrice += cartItem.Product.Price * cartItem.Quantity
+		subtotal += cartItem.Product.Price * cartItem.Quantity
 		orderItems = append(orderItems, models.OrderItem{
 			ProductID: cartItem.ProductID,
 			Quantity:  cartItem.Quantity,
@@ -55,9 +56,15 @@ func CreateOrder(c *gin.Context) {
 		})
 	}
 
+	// Compute shipping/tax/total from the same rules the cart preview uses.
+	breakdown := pricing.Compute(subtotal)
+
 	order := models.Order{
 		UserID:           userID,
-		TotalPrice:       totalPrice,
+		Subtotal:         breakdown.Subtotal,
+		Shipping:         breakdown.Shipping,
+		Tax:              breakdown.Tax,
+		TotalPrice:       breakdown.Total,
 		ShippingDetailID: shippingDetail.ID,
 		OrderItems:       orderItems,
 	}

@@ -1,47 +1,51 @@
-import React, { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "../utils/AuthContext";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useShop } from "../utils/ShopContext";
-import { CartItemsList, CartTotals, SectionTitle } from "../components";
+import { CartItemsList, CartTotals } from "../components";
 
 const Cart = () => {
   const { user } = useAuth();
   const { cartItems, fetchCartDetails } = useShop();
-  const token = localStorage.getItem("token");
-  if (!token) throw new Error("No token found");
 
   useEffect(() => {
-    fetchCartDetails(user.ID);
-  }, [token]);
+    fetchCartDetails();
+  }, []);
 
   return (
-    <>
-      <SectionTitle text="Shopping Cart" />
+    <section className="section-block">
+      <div className="border-b border-graphite pb-5">
+        <p className="brand-eyebrow mb-1">Your bag</p>
+        <h1 className="brand-heading text-3xl">Shopping cart</h1>
+      </div>
+
       {cartItems.length === 0 ? (
-        <>
-          <SectionTitle text="Your Shopping Cart is Empty" />
-          <Link to="/products">Continue Shopping?</Link>
-        </>
+        <div className="mt-16 text-center">
+          <p className="text-lg text-ash">Your cart is empty.</p>
+          <Link to="/products" className="brand-btn mt-6">
+            Continue shopping
+          </Link>
+        </div>
       ) : (
-        <div className="mt-8 grid gap-8  lg:grid-cols-12">
+        <div className="mt-10 grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-8">
             <CartItemsList />
           </div>
-          <div className="lg:col-span-4 lg:pl-4">
+          <div className="lg:col-span-4">
             <CartTotals />
             {user ? (
-              <Link to="/checkout" className="btn btn-primary btn-block mt-8">
+              <Link to="/checkout" className="brand-btn w-full mt-6">
                 Proceed to checkout
               </Link>
             ) : (
-              <Link to="/login" className="btn btn-primary btn-block mt-8">
-                please login
+              <Link to="/login" className="brand-btn w-full mt-6">
+                Please log in
               </Link>
             )}
           </div>
         </div>
       )}
-    </>
+    </section>
   );
 };
 

@@ -1,58 +1,32 @@
+import { useShop } from "../utils/ShopContext";
 import ProductsGrid from "./ProductsGrid";
-import ProductsList from "./ProductsList";
-import { useState } from "react";
-import { BsFillGridFill, BsList } from "react-icons/bs";
 
 const ProductsContainer = () => {
-  const totalProducts = 16;
-  const [layout, setLayout] = useState("list");
-
-  const setActiveStyles = (pattern) => {
-    return `text-xl btn btn-circle btn-sm ${
-      pattern === layout
-        ? "btn-primary text-primary-content"
-        : "btn-ghost text-base-content"
-    }`;
-  };
+  const { products } = useShop();
+  const totalProducts = (products || []).length;
 
   return (
-    <>
+    <section className="section-block">
       {/* HEADER */}
-      <div className="flex justify-between items-center mt-8 border-b border-base-300 pb-5">
-        <h4 className="font-medium text-md">
-          {/* {totalProducts} product{totalProducts > 1 && "s"} */}
-          16 products
-        </h4>
-        <div className="flex gap-x-2">
-          <button
-            onClick={() => setLayout("grid")}
-            className={setActiveStyles("grid")}
-          >
-            <BsFillGridFill />
-          </button>
-
-          <button
-            onClick={() => setLayout("list")}
-            className={setActiveStyles("list")}
-          >
-            <BsList />
-          </button>
+      <div className="flex justify-between items-center border-b border-graphite pb-5">
+        <div>
+          <p className="brand-eyebrow mb-1">The collection</p>
+          <h1 className="brand-heading text-3xl">All fragrances</h1>
         </div>
+        <p className="text-sm text-ash whitespace-nowrap">
+          {totalProducts} {totalProducts === 1 ? "scent" : "scents"}
+        </p>
       </div>
 
       {/* PRODUCTS */}
-      <div>
-        {totalProducts === 0 ? (
-          <h5 className="text-2xl mt-16">
-            Sorry, no products matched your search...
-          </h5>
-        ) : layout === "grid" ? (
-          <ProductsGrid />
-        ) : (
-          <ProductsList />
-        )}
-      </div>
-    </>
+      {totalProducts === 0 ? (
+        <p className="text-lg text-ash mt-16">
+          No fragrances available right now. Check back soon.
+        </p>
+      ) : (
+        <ProductsGrid />
+      )}
+    </section>
   );
 };
 

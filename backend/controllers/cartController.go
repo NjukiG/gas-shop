@@ -6,6 +6,7 @@ import (
 
 	"gas-shop/initializers"
 	"gas-shop/models"
+	"gas-shop/pricing"
 	"gas-shop/response"
 
 	"github.com/gin-gonic/gin"
@@ -201,13 +202,23 @@ func ReviewCart(c *gin.Context) {
 		return
 	}
 
-	cartItems, totalPrice, err := loadCartItems(cart.ID)
+	cartItems, subtotal, err := loadCartItems(cart.ID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve cart items")
 		return
 	}
 
-	response.JSON(c, http.StatusOK, gin.H{"cartItems": cartItems, "totalPrice": totalPrice})
+	// Backend is the source of truth for shipping/tax so the preview matches
+	// the final order exactly.
+	breakdown := pricing.Compute(subtotal)
+
+	response.JSON(c, http.StatusOK, gin.H{
+		"cartItems": cartItems,
+		"subtotal":  breakdown.Subtotal,
+		"shipping":  breakdown.Shipping,
+		"tax":       breakdown.Tax,
+		"totalPrice": breakdown.Total,
+	})
 }
 
 // loadCartItems returns a cart's items (with products) and the computed total.

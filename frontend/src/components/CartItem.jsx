@@ -1,70 +1,55 @@
-import { useState } from "react";
-import { formatPrice, generateAmountOptions } from "../utils/index";
+import { formatPrice } from "../utils/index";
 import { useShop } from "../utils/ShopContext";
-const CartItem = ({ cartItem }) => {
-  const { removeItemFromCart } = useShop();
-  const [amount, setAmount] = useState(cartItem.quantity);
+import QuantityStepper from "./QuantityStepper";
 
-  const { ID, Title, Price, Image, Brand, Shipping, description, featured } =
-    cartItem.product;
+const CartItem = ({ cartItem }) => {
+  const { removeItemFromCart, updateCartItemQuantity } = useShop();
+
+  const { ID, Title, Price, Image, Brand } = cartItem.product;
 
   const handleRemoveItem = () => {
     removeItemFromCart(ID);
   };
 
-  const handleAmount = (e) => {
-    setAmount(parseInt(e.target.value));
+  const handleQuantityChange = (newQty) => {
+    // Persist to the backend; totals refresh from the server response.
+    updateCartItemQuantity(ID, newQty);
   };
 
   return (
-    <article
-      key={ID}
-      className="mb-12 flex flex-col gap-y-4 sm:flex-row flex-wrap border-b border-base-300 pb-6 last:border-b-0"
-    >
+    <article className="flex flex-col gap-y-4 sm:flex-row sm:items-center flex-wrap border-b border-graphite py-6 first:pt-0 last:border-b-0">
       {/* IMAGE */}
       <img
         src={Image}
         alt={Title}
-        className="h-24 w-24 rounded-lg sm:h-32 sm:w-32 object-cover"
+        className="h-24 w-24 rounded-box sm:h-28 sm:w-28 object-cover bg-graphite"
       />
+
       {/* INFO */}
-      <div className="sm:ml-16 sm:w-48">
-        {/* TITLE */}
-        <h3 className="capitalize font-medium">{Title}</h3>
-        {/* BRAND */}
-        <h4 className="mt-2 capitalize text-sm">{Brand}</h4>
-      </div>
-      <div className="sm:ml-12">
-        {/* AMOUNT */}
-        <div className="form-control max-w-xs">
-          <label htmlFor="amount" className="label p-0">
-            <span className="label-text">{cartItem.quantity}</span>
-          </label>
-          <select
-            name="amount"
-            id="amount"
-            className="mt-2 select select-base select-bordered select-xs"
+      <div className="sm:ml-8 flex-1">
+        <h3 className="font-display font-semibold text-fog tracking-tightest">
+          {Title}
+        </h3>
+        <p className="brand-eyebrow mt-1">{Brand}</p>
+
+        {/* QUANTITY + REMOVE */}
+        <div className="mt-3 flex items-center gap-x-6">
+          <QuantityStepper
             value={cartItem.quantity}
-            onChange={handleAmount}
+            onChange={handleQuantityChange}
+            size="sm"
+          />
+          <button
+            className="text-sm text-ash hover:text-platinum transition-colors"
+            onClick={handleRemoveItem}
           >
-            <option value={1}>1</option>
-            <option value={2}>2</option>
-            <option value={3}>3</option>
-            <option value={4}>4</option>
-            <option value={5}>5</option>{" "}
-          </select>
+            Remove
+          </button>
         </div>
-        {/* REMOVE */}
-        <button
-          className="mt-2 link link-primary link-hover text-sm"
-          onClick={handleRemoveItem}
-        >
-          Remove
-        </button>
       </div>
 
       {/* PRICE */}
-      <p className="font-medium sm:ml-auto">
+      <p className="font-display font-semibold text-platinum sm:ml-auto">
         {formatPrice(Price * cartItem.quantity)}
       </p>
     </article>

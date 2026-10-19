@@ -95,7 +95,10 @@ const (
 type Order struct {
 	gorm.Model
 	UserID           uint
-	TotalPrice       int
+	Subtotal         int            // sum of line items, in cents
+	Shipping         int            // shipping cost, in cents
+	Tax              int            // tax amount, in cents
+	TotalPrice       int            // subtotal + shipping + tax, in cents
 	Status           string         `gorm:"default:'pending'"`
 	ShippingDetail   ShippingDetail `gorm:"foreignKey:ShippingDetailID"`
 	ShippingDetailID uint

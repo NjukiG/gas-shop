@@ -17,6 +17,12 @@ export const ShopProvider = ({ children }) => {
   const [categoryProducts, setCategoryProducts] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [cartTotals, setCartTotals] = useState(0);
+  const [cartSummary, setCartSummary] = useState({
+    subtotal: 0,
+    shipping: 0,
+    tax: 0,
+    total: 0,
+  });
   const [shippingDetails, setShippingDetails] = useState({});
   const [orders, setOrders] = useState([]);
   // console.log(user);
@@ -94,6 +100,12 @@ export const ShopProvider = ({ children }) => {
       if (data && Array.isArray(data.cartItems)) {
         setCartItems(data.cartItems);
         setCartTotals(data.totalPrice);
+        setCartSummary({
+          subtotal: data.subtotal || 0,
+          shipping: data.shipping || 0,
+          tax: data.tax || 0,
+          total: data.totalPrice || 0,
+        });
       } else {
         console.error("Expected an array but got:", data);
       }
@@ -147,9 +159,37 @@ export const ShopProvider = ({ children }) => {
         );
         setCartItems(updatedCart);
         toast.error("Item removed from your cart");
-        navigate("/products");
+        // Refresh cart items + totals from the backend.
+        fetchCartDetails();
       } else {
         console.error("Failed to remove item");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  // Set the quantity of a product already in the cart, then refresh totals.
+  const updateCartItemQuantity = async (productId, quantity) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/protected/cart/items/${productId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantity }),
+        }
+      );
+      if (response.ok) {
+        // Refresh cart items + totals so the summary stays in sync.
+        await fetchCartDetails();
+      } else {
+        const data = await response.json();
+        console.error("Failed to update quantity:", data.error);
+        toast.error(data.error || "Failed to update quantity");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -285,12 +325,14 @@ export const ShopProvider = ({ children }) => {
     categoryProducts,
     cartItems,
     cartTotals,
+    cartSummary,
     orders,
     fetchProductById,
     fetchProductsByCategory,
     fetchCartDetails,
     addItemToCart,
     removeItemFromCart,
+    updateCartItemQuantity,
     // clearCart,
     fetchShippingDetails,
     updateShippingDetails,

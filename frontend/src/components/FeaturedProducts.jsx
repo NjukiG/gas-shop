@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import ProductsGrid from "./ProductsGrid";
+import FeaturedProductsGrid from "./FeaturedProductsGrid";
 
 const FeaturedProducts = () => {
   return (
@@ -13,7 +13,7 @@ const FeaturedProducts = () => {
           View all →
         </Link>
       </div>
-      <ProductsGrid />
+      <FeaturedProductsGrid />
     </section>
   );
 };
