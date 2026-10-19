@@ -12,11 +12,11 @@ const (
 // User Object/Model
 type User struct {
 	gorm.Model
-	FullName  string     `gorm:"not null"`
-	Email     string     `gorm:"unique;not null"`
-	Password  string     `gorm:"not null"`
-	Role     Role `gorm:"not null"`
-	Cart     Cart `gorm:"foreignKey:UserID"`
+	FullName string `gorm:"not null"`
+	Email    string `gorm:"unique;not null"`
+	Password string `gorm:"not null" json:"-"` // never serialize the password hash
+	Role     Role   `gorm:"not null"`
+	Cart     Cart   `gorm:"foreignKey:UserID"`
 }
 
 // Category struct/ object
@@ -104,6 +104,7 @@ const (
 type Order struct {
 	gorm.Model
 	UserID           uint
+	User             User           `gorm:"foreignKey:UserID"`
 	Subtotal         int            // sum of line items, in cents
 	Shipping         int            // shipping cost, in cents
 	Tax              int            // tax amount, in cents

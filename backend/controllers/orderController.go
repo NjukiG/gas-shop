@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"gas-shop/config"
 	"gas-shop/initializers"
@@ -139,6 +140,23 @@ func GetOrders(c *gin.Context) {
 	response.JSON(c, http.StatusOK, gin.H{"orders": orders})
 }
 
+// ListAllOrders returns every order across all users (admin only), including
+// the customer and shipping details, newest first.
+func ListAllOrders(c *gin.Context) {
+	var orders []models.Order
+	if err := initializers.DB.
+		Preload("OrderItems.Product").
+		Preload("ShippingDetail").
+		Preload("User").
+		Order("created_at DESC").
+		Find(&orders).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve orders")
+		return
+	}
+
+	response.JSON(c, http.StatusOK, gin.H{"orders": orders})
+}
+
 // GetOrder returns a single order belonging to the authenticated user.
 func GetOrder(c *gin.Context) {
 	user, _ := c.Get("user")
@@ -183,26 +201,28 @@ func UpdateOrderStatus(c *gin.Context) {
 	}
 
 	var body struct {
-		Status models.OrderStatus `json:"status" binding:"required"`
+		Status string `json:"status" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body: a status is required")
 		return
 	}
 
-	validStatuses := map[models.OrderStatus]bool{
-		models.OrderPending:   true,
-		models.OrderProcessed: true,
-		models.OrderShipped:   true,
-		models.OrderDelivered: true,
-		models.OrderCancelled: true,
+	// Accept the status case-insensitively and normalize to the canonical value.
+	validStatuses := map[string]models.OrderStatus{
+		"pending":   models.OrderPending,
+		"processed": models.OrderProcessed,
+		"shipped":   models.OrderShipped,
+		"delivered": models.OrderDelivered,
+		"cancelled": models.OrderCancelled,
 	}
-	if !validStatuses[body.Status] {
-		response.Error(c, http.StatusBadRequest, "Invalid order status")
+	canonical, ok := validStatuses[strings.ToLower(strings.TrimSpace(body.Status))]
+	if !ok {
+		response.Error(c, http.StatusBadRequest, "Invalid order status. Use: pending, processed, shipped, delivered, or cancelled")
 		return
 	}
 
-	order.Status = string(body.Status)
+	order.Status = string(canonical)
 	if err := initializers.DB.Save(&order).Error; err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to update order status")
 		return

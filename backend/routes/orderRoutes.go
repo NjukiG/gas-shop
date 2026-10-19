@@ -22,6 +22,13 @@ func RegisterOrderRoutes(router *gin.Engine) {
 		protectedRoutes.POST("/orders", controllers.CreateOrder)
 		protectedRoutes.GET("/orders", controllers.GetOrders)
 		protectedRoutes.GET("/orders/:order_id", controllers.GetOrder)
-		// protectedRoutes.PATCH("/orders/:order_id/status", controllers.UpdateOrderStatus)
+	}
+
+	// Admin-only order management.
+	adminRoutes := router.Group("/protected/admin")
+	adminRoutes.Use(middleware.RequireAuth, middleware.AdminOnly())
+	{
+		adminRoutes.GET("/orders", controllers.ListAllOrders)
+		adminRoutes.PATCH("/orders/:order_id/status", controllers.UpdateOrderStatus)
 	}
 }

@@ -24,5 +24,7 @@ func RegisterCategoryRoutes(router *gin.Engine) {
 
 	{
 		adminRoutes.POST("/categories", controllers.CreateCategory)
+		adminRoutes.PUT("/categories/:id", controllers.UpdateCategory)
+		adminRoutes.DELETE("/categories/:id", controllers.DeleteCategory)
 	}
 }
