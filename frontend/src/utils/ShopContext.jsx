@@ -390,6 +390,8 @@ export const ShopProvider = ({ children }) => {
     cartTotals,
     cartSummary,
     orders,
+    fetchProducts,
+    fetchCategories,
     fetchProductById,
     fetchProductsByCategory,
     fetchCartDetails,

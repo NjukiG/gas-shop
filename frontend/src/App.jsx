@@ -13,6 +13,12 @@ import {
 } from "./pages";
 import { Route, Routes } from "react-router-dom";
 import PrivateRoutes from "./utils/PrivateRoutes";
+import AdminRoute from "./utils/AdminRoute";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminCategories from "./pages/admin/AdminCategories";
+import AdminOrders from "./pages/admin/AdminOrders";
 
 const App = () => {
   return (
@@ -31,6 +37,16 @@ const App = () => {
           <Route path="cart" element={<Cart />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="orders" element={<Orders />} />
+        </Route>
+
+        {/* Admin routes (admin-only) */}
+        <Route element={<AdminRoute />}>
+          <Route path="admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="orders" element={<AdminOrders />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Error />} />

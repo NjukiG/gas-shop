@@ -1,4 +1,5 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../utils/AuthContext";
 
 // Links come in two kinds:
 //  - hash links (home sections) that smooth-scroll to a section on "/"
@@ -18,6 +19,13 @@ const linkClass = (active) =>
 
 const NavLinks = () => {
   const { pathname, hash } = useLocation();
+  const { user } = useAuth();
+
+  // Admins get an extra link to the admin area.
+  const allLinks =
+    user && user.Role === "Admin"
+      ? [...links, { id: 6, to: "/admin", text: "admin" }]
+      : links;
 
   const handleHashClick = (targetHash) => (e) => {
     // If already on the home page, scroll directly without a full navigation.
@@ -34,7 +42,7 @@ const NavLinks = () => {
 
   return (
     <>
-      {links.map((link) => {
+      {allLinks.map((link) => {
         const { id, to, text, hash: linkHash } = link;
 
         if (linkHash) {
