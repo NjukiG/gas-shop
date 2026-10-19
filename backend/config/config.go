@@ -33,6 +33,10 @@ type Config struct {
 	// AllowedOrigins is the list of origins permitted by CORS.
 	// Defaults to the local Vite dev server.
 	AllowedOrigins []string
+
+	// StripeSecretKey is the Stripe secret API key used to create payment
+	// intents. Required for the payment flow.
+	StripeSecretKey string
 }
 
 // current holds the loaded configuration so that packages which cannot easily
@@ -70,10 +74,11 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		DatabaseURL:    os.Getenv("DB_URL"),
-		JWTSecret:      os.Getenv("SECRET"),
-		Port:           getEnvDefault("PORT", "3000"),
-		AllowedOrigins: parseOrigins(getEnvDefault("ALLOWED_ORIGINS", "http://localhost:5173")),
+		DatabaseURL:     os.Getenv("DB_URL"),
+		JWTSecret:       os.Getenv("SECRET"),
+		Port:            getEnvDefault("PORT", "3000"),
+		AllowedOrigins:  parseOrigins(getEnvDefault("ALLOWED_ORIGINS", "http://localhost:5173")),
+		StripeSecretKey: os.Getenv("STRIPE_SECRET_KEY"),
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -92,6 +97,9 @@ func (c *Config) validate() error {
 	}
 	if c.JWTSecret == "" {
 		missing = append(missing, "SECRET")
+	}
+	if c.StripeSecretKey == "" {
+		missing = append(missing, "STRIPE_SECRET_KEY")
 	}
 
 	if len(missing) > 0 {

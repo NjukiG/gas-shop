@@ -20,11 +20,13 @@ const fields = [
   { name: "PhoneNumber", label: "Phone number", type: "tel", full: true },
 ];
 
-const CheckoutForm = ({ shippingDetails }) => {
-  const { updateShippingDetails, makeNewOrder } = useShop();
+// CheckoutForm collects/saves shipping details. On successful save it calls
+// onReady() so the parent can advance to the payment step.
+const CheckoutForm = ({ shippingDetails, onReady }) => {
+  const { updateShippingDetails } = useShop();
   const [form, setForm] = useState(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Pre-fill with the user's saved shipping details when available.
   useEffect(() => {
     if (shippingDetails && shippingDetails.Address) {
       setForm({
@@ -38,15 +40,12 @@ const CheckoutForm = ({ shippingDetails }) => {
     }
   }, [shippingDetails]);
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Ensure every shipping field is completely filled (trimmed) before
-    // saving or placing the order.
     const trimmed = Object.fromEntries(
       Object.entries(form).map(([k, v]) => [k, (v || "").trim()])
     );
@@ -59,17 +58,16 @@ const CheckoutForm = ({ shippingDetails }) => {
       );
       return;
     }
-
-    // Phone number should contain digits.
     if (!/\d/.test(trimmed.PhoneNumber)) {
       toast.error("Please enter a valid phone number");
       return;
     }
 
-    // Save shipping details first; only place the order if that succeeded.
+    setSubmitting(true);
     const saved = await updateShippingDetails(trimmed);
+    setSubmitting(false);
     if (saved) {
-      makeNewOrder();
+      onReady();
     }
   };
 
@@ -79,10 +77,7 @@ const CheckoutForm = ({ shippingDetails }) => {
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {fields.map((field) => (
           <div key={field.name} className={field.full ? "sm:col-span-2" : ""}>
-            <label
-              htmlFor={field.name}
-              className="brand-eyebrow block mb-2"
-            >
+            <label htmlFor={field.name} className="brand-eyebrow block mb-2">
               {field.label}
             </label>
             <input
@@ -98,8 +93,12 @@ const CheckoutForm = ({ shippingDetails }) => {
         ))}
 
         <div className="sm:col-span-2 mt-2">
-          <button type="submit" className="brand-btn w-full">
-            Confirm &amp; place order
+          <button
+            type="submit"
+            disabled={submitting}
+            className="brand-btn w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? "Saving…" : "Continue to payment"}
           </button>
         </div>
       </form>

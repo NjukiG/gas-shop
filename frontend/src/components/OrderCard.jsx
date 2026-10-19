@@ -24,12 +24,20 @@ const OrderCard = ({ order }) => {
     ID,
     OrderItems = [],
     Status,
+    PaymentStatus,
     Subtotal,
     Shipping,
     Tax,
     TotalPrice,
     CreatedAt,
   } = order;
+
+  const paymentStyles =
+    PaymentStatus === "paid"
+      ? "bg-success/15 text-success border-success/30"
+      : PaymentStatus === "failed"
+      ? "bg-error/15 text-error border-error/30"
+      : "bg-warning/15 text-warning border-warning/30";
 
   const itemCount = OrderItems.reduce((sum, i) => sum + (i.Quantity || 0), 0);
 
@@ -57,13 +65,20 @@ const OrderCard = ({ order }) => {
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {PaymentStatus && (
+            <span
+              className={`hidden sm:inline-block rounded-btn border px-3 py-1 text-xs uppercase tracking-wider ${paymentStyles}`}
+            >
+              Payment · {PaymentStatus === "paid" ? "Paid" : PaymentStatus}
+            </span>
+          )}
           <span
             className={`hidden sm:inline-block rounded-btn border px-3 py-1 text-xs uppercase tracking-wider ${statusStyles(
               Status
             )}`}
           >
-            {Status}
+            Order · {Status}
           </span>
           <span className="font-display font-semibold text-platinum whitespace-nowrap">
             {formatPrice(TotalPrice)}
@@ -77,14 +92,23 @@ const OrderCard = ({ order }) => {
       {/* DETAILS */}
       {open && (
         <div className="border-t border-graphite p-5">
-          {/* Status on mobile */}
-          <span
-            className={`sm:hidden inline-block mb-4 rounded-btn border px-3 py-1 text-xs uppercase tracking-wider ${statusStyles(
-              Status
-            )}`}
-          >
-            {Status}
-          </span>
+          {/* Statuses on mobile (hidden in the header on small screens) */}
+          <div className="sm:hidden flex flex-wrap gap-2 mb-4">
+            {PaymentStatus && (
+              <span
+                className={`inline-block rounded-btn border px-3 py-1 text-xs uppercase tracking-wider ${paymentStyles}`}
+              >
+                Payment · {PaymentStatus === "paid" ? "Paid" : PaymentStatus}
+              </span>
+            )}
+            <span
+              className={`inline-block rounded-btn border px-3 py-1 text-xs uppercase tracking-wider ${statusStyles(
+                Status
+              )}`}
+            >
+              Order · {Status}
+            </span>
+          </div>
 
           {/* LINE ITEMS */}
           <div className="space-y-4">

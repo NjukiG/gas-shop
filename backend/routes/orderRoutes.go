@@ -18,6 +18,7 @@ func RegisterOrderRoutes(router *gin.Engine) {
 	// cart id. This also removes the previous route conflict where two ":id"
 	// params collided on the same path.
 	{
+		protectedRoutes.POST("/payments/create-intent", controllers.CreatePaymentIntent)
 		protectedRoutes.POST("/orders", controllers.CreateOrder)
 		protectedRoutes.GET("/orders", controllers.GetOrders)
 		protectedRoutes.GET("/orders/:order_id", controllers.GetOrder)

@@ -5,22 +5,34 @@ import (
 	"net/http"
 	"strconv"
 
+	"gas-shop/config"
 	"gas-shop/initializers"
 	"gas-shop/models"
 	"gas-shop/pricing"
 	"gas-shop/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stripe/stripe-go/v79"
+	"github.com/stripe/stripe-go/v79/paymentintent"
 	"gorm.io/gorm"
 )
 
 // CreateOrder creates a new order from the authenticated user's cart.
 //
-// The order creation and cart clearing run inside a single transaction so the
-// cart is only emptied if the order is persisted successfully.
+// A paymentIntentId (from Stripe) is required. The payment is verified
+// server-side with Stripe before the order is marked paid — the client's word
+// is never trusted. Order creation and cart clearing run in one transaction.
 func CreateOrder(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(models.User).ID
+
+	var body struct {
+		PaymentIntentID string `json:"paymentIntentId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "A payment is required to place an order")
+		return
+	}
 
 	// Load the user's cart with product details.
 	var cart models.Cart
@@ -59,18 +71,37 @@ func CreateOrder(c *gin.Context) {
 	// Compute shipping/tax/total from the same rules the cart preview uses.
 	breakdown := pricing.Compute(subtotal)
 
+	// Verify the payment with Stripe server-side: it must exist, have succeeded,
+	// and its amount must match our computed total. Never trust the client.
+	stripe.Key = config.Get().StripeSecretKey
+	pi, err := paymentintent.Get(body.PaymentIntentID, nil)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Could not verify payment")
+		return
+	}
+	if pi.Status != stripe.PaymentIntentStatusSucceeded {
+		response.Error(c, http.StatusBadRequest, "Payment has not been completed")
+		return
+	}
+	if pi.Amount != int64(breakdown.Total) {
+		response.Error(c, http.StatusBadRequest, "Payment amount does not match order total")
+		return
+	}
+
 	order := models.Order{
 		UserID:           userID,
 		Subtotal:         breakdown.Subtotal,
 		Shipping:         breakdown.Shipping,
 		Tax:              breakdown.Tax,
 		TotalPrice:       breakdown.Total,
+		PaymentStatus:    models.PaymentPaid,
+		PaymentIntentID:  pi.ID,
 		ShippingDetailID: shippingDetail.ID,
 		OrderItems:       orderItems,
 	}
 
 	// Persist the order and clear the cart atomically.
-	err := initializers.DB.Transaction(func(tx *gorm.DB) error {
+	txErr := initializers.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&order).Error; err != nil {
 			return err
 		}
@@ -79,13 +110,13 @@ func CreateOrder(c *gin.Context) {
 		}
 		return nil
 	})
-	if err != nil {
+	if txErr != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to create order")
 		return
 	}
 
 	response.JSON(c, http.StatusCreated, gin.H{
-		"message": "Order created successfully",
+		"message": "Order placed and payment confirmed",
 		"order":   order,
 	})
 }

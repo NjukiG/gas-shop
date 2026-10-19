@@ -92,6 +92,15 @@ const (
 	OrderCancelled OrderStatus = "Cancelled"
 )
 
+// PaymentStatus tracks the payment state of an order.
+type PaymentStatus string
+
+const (
+	PaymentPending PaymentStatus = "pending"
+	PaymentPaid    PaymentStatus = "paid"
+	PaymentFailed  PaymentStatus = "failed"
+)
+
 type Order struct {
 	gorm.Model
 	UserID           uint
@@ -100,6 +109,8 @@ type Order struct {
 	Tax              int            // tax amount, in cents
 	TotalPrice       int            // subtotal + shipping + tax, in cents
 	Status           string         `gorm:"default:'pending'"`
+	PaymentStatus    PaymentStatus  `gorm:"default:'pending'"` // pending / paid / failed
+	PaymentIntentID  string         // Stripe PaymentIntent id
 	ShippingDetail   ShippingDetail `gorm:"foreignKey:ShippingDetailID"`
 	ShippingDetailID uint
 	OrderItems       []OrderItem `gorm:"foreignKey:OrderID"`

@@ -299,9 +299,36 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  // Place an order from the current cart. On success, clears local cart state
-  // (the backend empties the cart) so stale items don't reappear.
-  const makeNewOrder = async () => {
+  // Ask the backend to create a Stripe PaymentIntent for the current cart.
+  // Returns { clientSecret, paymentIntentId } or null on failure.
+  const createPaymentIntent = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/protected/payments/create-intent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        return data; // { clientSecret, paymentIntentId, amount }
+      }
+      toast.error(data.error || "Failed to start payment");
+      return null;
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to start payment");
+      return null;
+    }
+  };
+
+  // Place an order after a successful payment. Requires the Stripe
+  // paymentIntentId, which the backend verifies before marking the order paid.
+  const makeNewOrder = async (paymentIntentId) => {
     try {
       const response = await fetch(
         `http://localhost:3000/protected/orders`,
@@ -311,6 +338,7 @@ export const ShopProvider = ({ children }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({ paymentIntentId }),
         }
       );
 
@@ -372,6 +400,7 @@ export const ShopProvider = ({ children }) => {
     fetchShippingDetails,
     updateShippingDetails,
     fetchOrders,
+    createPaymentIntent,
     makeNewOrder,
   };
 
