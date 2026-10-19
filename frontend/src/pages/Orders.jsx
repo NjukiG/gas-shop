@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useShop } from "../utils/ShopContext";
-import SectionTitle from "../components/SectionTitle";
 import OrdersList from "../components/OrdersList";
 
 const Orders = () => {
@@ -10,15 +10,24 @@ const Orders = () => {
     fetchOrders();
   }, []);
 
-  if (orders.length === 0) {
-    return <SectionTitle text="No Orders Yet" />;
-  }
-
   return (
-    <div className="container mx-auto my-8 px-4">
-      <SectionTitle text="Your Orders" />
-      <OrdersList />
-    </div>
+    <section className="section-block">
+      <div className="border-b border-graphite pb-5">
+        <p className="brand-eyebrow mb-1">Your account</p>
+        <h1 className="brand-heading text-3xl">Order history</h1>
+      </div>
+
+      {orders.length === 0 ? (
+        <div className="mt-16 text-center">
+          <p className="text-lg text-ash">You haven&apos;t placed any orders yet.</p>
+          <Link to="/products" className="brand-btn mt-6">
+            Start shopping
+          </Link>
+        </div>
+      ) : (
+        <OrdersList />
+      )}
+    </section>
   );
 };
 

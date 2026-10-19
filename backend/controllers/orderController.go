@@ -99,6 +99,7 @@ func GetOrders(c *gin.Context) {
 	if err := initializers.DB.
 		Preload("OrderItems.Product").
 		Where("user_id = ?", userID).
+		Order("created_at DESC").
 		Find(&orders).Error; err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve orders")
 		return
