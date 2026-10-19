@@ -4,6 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Brand-aligned react-toastify styling (dark/platinum). */
+:root {
+  --toastify-color-dark: #15171c; /* onyx */
+  --toastify-text-color-dark: #e8eaed; /* fog */
+  --toastify-color-progress-dark: #b8bcc4; /* platinum */
+  --toastify-font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+.Toastify__toast {
+  border: 1px solid #23262d; /* graphite */
+  border-radius: 0.6rem;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
