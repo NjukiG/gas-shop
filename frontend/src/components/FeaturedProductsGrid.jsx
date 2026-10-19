@@ -1,9 +1,14 @@
 import { useShop } from "../utils/ShopContext";
 import ProductCard from "./ProductCard";
+import Loading from "./Loading";
 
 // FeaturedProductsGrid shows only featured products (used on the landing teaser).
 const FeaturedProductsGrid = () => {
-  const { products } = useShop();
+  const { products, productsLoading } = useShop();
+
+  if (productsLoading) {
+    return <Loading />;
+  }
 
   const featured = (products || []).filter((p) => p.featured === true);
 

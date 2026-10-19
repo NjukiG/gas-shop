@@ -3,10 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { formatPrice } from "../utils/index";
 import { useShop } from "../utils/ShopContext";
 import QuantityStepper from "../components/QuantityStepper";
+import Loading from "../components/Loading";
 
 const SingleProduct = () => {
   const { ID } = useParams();
-  const { product, fetchProductById, addItemToCart } = useShop();
+  const { product, productLoading, fetchProductById, addItemToCart } = useShop();
   const [amount, setAmount] = useState(1);
 
   useEffect(() => {
@@ -17,13 +18,9 @@ const SingleProduct = () => {
     addItemToCart(product.ID, amount);
   };
 
-  // Guard against the first render before the product has loaded.
-  if (!product || !product.ID) {
-    return (
-      <div className="section-block">
-        <p className="text-ash">Loading fragrance…</p>
-      </div>
-    );
+  // Show the spinner while loading or before the product resolves.
+  if (productLoading || !product || !product.ID) {
+    return <Loading />;
   }
 
   return (

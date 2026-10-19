@@ -1,8 +1,9 @@
 import { useShop } from "../utils/ShopContext";
 import ProductsGrid from "./ProductsGrid";
+import Loading from "./Loading";
 
 const ProductsContainer = () => {
-  const { products } = useShop();
+  const { products, productsLoading } = useShop();
   const totalProducts = (products || []).length;
 
   return (
@@ -14,12 +15,16 @@ const ProductsContainer = () => {
           <h1 className="brand-heading text-3xl">All fragrances</h1>
         </div>
         <p className="text-sm text-ash whitespace-nowrap">
-          {totalProducts} {totalProducts === 1 ? "scent" : "scents"}
+          {productsLoading
+            ? "Loading…"
+            : `${totalProducts} ${totalProducts === 1 ? "scent" : "scents"}`}
         </p>
       </div>
 
       {/* PRODUCTS */}
-      {totalProducts === 0 ? (
+      {productsLoading ? (
+        <Loading />
+      ) : totalProducts === 0 ? (
         <p className="text-lg text-ash mt-16">
           No fragrances available right now. Check back soon.
         </p>

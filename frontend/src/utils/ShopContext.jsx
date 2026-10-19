@@ -12,8 +12,10 @@ export const ShopProvider = ({ children }) => {
 
   // State for products, categories, cart, etc.
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [categories, setCategories] = useState([]);
   const [product, setProduct] = useState({});
+  const [productLoading, setProductLoading] = useState(true);
   const [categoryProducts, setCategoryProducts] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [cartTotals, setCartTotals] = useState(0);
@@ -33,17 +35,21 @@ export const ShopProvider = ({ children }) => {
 
   // Function to fetch products
   const fetchProducts = async () => {
+    setProductsLoading(true);
     try {
       const response = await fetch("http://localhost:3000/public/products");
       const data = await response.json();
       setProducts(data.products || []);
     } catch (error) {
       console.error("Failed to fetch products:", error);
+    } finally {
+      setProductsLoading(false);
     }
   };
 
   // Fetch product by ID
   const fetchProductById = async (productId) => {
+    setProductLoading(true);
     try {
       const response = await fetch(
         `http://localhost:3000/public/products/${productId}`
@@ -52,6 +58,8 @@ export const ShopProvider = ({ children }) => {
       setProduct(data.product || {});
     } catch (error) {
       console.error(`Failed to fetch product with ID ${productId}:`, error);
+    } finally {
+      setProductLoading(false);
     }
   };
   // Function to fetch categories
@@ -345,7 +353,9 @@ export const ShopProvider = ({ children }) => {
   const value = {
     categories,
     products,
+    productsLoading,
     product,
+    productLoading,
     shippingDetails,
     categoryProducts,
     cartItems,
