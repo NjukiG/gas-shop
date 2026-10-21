@@ -1,0 +1,13 @@
+# Never copy local secrets or env files into the image.
+.env
+.env.*
+!.env.example
+
+# Build artifacts and local tooling.
+*.exe
+gas-shop.exe
+
+# VCS and editor noise.
+.git
+.gitignore
+*.md
