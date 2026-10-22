@@ -37,4 +37,19 @@ output "ecr_backend_repository_url" {
   value       = aws_ecr_repository.backend.repository_url
 }
 
+output "rds_endpoint" {
+  description = "RDS PostgreSQL endpoint (host:port)."
+  value       = aws_db_instance.main.endpoint
+}
+
+output "rds_address" {
+  description = "RDS PostgreSQL hostname."
+  value       = aws_db_instance.main.address
+}
+
+output "rds_master_secret_arn" {
+  description = "ARN of the Secrets Manager secret holding the RDS master password."
+  value       = aws_db_instance.main.master_user_secret[0].secret_arn
+}
+
 
