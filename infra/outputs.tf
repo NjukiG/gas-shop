@@ -21,3 +21,13 @@ output "region" {
   description = "AWS region in use."
   value       = var.region
 }
+
+output "eks_cluster_name" {
+  description = "Name of the EKS cluster (used to configure kubectl)."
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_endpoint" {
+  description = "Kubernetes API endpoint."
+  value       = module.eks.cluster_endpoint
+}
