@@ -1,0 +1,17 @@
+# Terraform provider plugins + cache (large, machine-specific)
+.terraform/
+
+# NOTE: .terraform.lock.hcl is intentionally NOT ignored — it pins exact
+# provider versions and should be committed for reproducible builds.
+
+# State files (ours live in S3, but never commit any local fallback)
+*.tfstate
+*.tfstate.*
+
+# Variable files that may contain secrets
+*.tfvars
+*.tfvars.json
+
+# Crash logs
+crash.log
+crash.*.log
