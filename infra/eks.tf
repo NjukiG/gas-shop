@@ -25,10 +25,10 @@ module "eks" {
   # access automatically, so kubectl works right after creation.
   enable_cluster_creator_admin_permissions = true
 
-  # This account's SCP denies iam:CreateOpenIDConnectProvider, so we cannot use
-  # IRSA (pod-level IAM via OIDC). Disable the OIDC provider accordingly and use
-  # native Kubernetes Secrets for app config instead of AWS Secrets Manager.
-  enable_irsa = false
+  # IRSA (IAM Roles for Service Accounts) lets individual pods assume scoped IAM
+  # roles via the cluster's OIDC provider — the best-practice way to grant pods
+  # least-privilege AWS access (here: reading secrets from Secrets Manager).
+  enable_irsa = true
 
   # Core add-ons the cluster needs (networking + DNS). We omit the EBS CSI
   # driver because (a) our app is stateless (data lives in RDS, not in-cluster
