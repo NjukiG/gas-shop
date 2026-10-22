@@ -31,3 +31,8 @@ output "eks_cluster_endpoint" {
   description = "Kubernetes API endpoint."
   value       = module.eks.cluster_endpoint
 }
+
+output "ecr_backend_repository_url" {
+  description = "ECR repository URL for the backend image (push/pull target)."
+  value       = aws_ecr_repository.backend.repository_url
+}
