@@ -7,12 +7,20 @@ import (
 	"gas-shop/config"
 	"gas-shop/initializers"
 	"gas-shop/routes"
+	"gas-shop/secrets"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	// In the cloud (USE_SECRETS_MANAGER=true), fetch secrets from AWS Secrets
+	// Manager (via IRSA) and populate env vars BEFORE loading config. Locally
+	// this is a no-op and config comes from .env.
+	if err := secrets.LoadIntoEnv(); err != nil {
+		log.Fatalf("startup: %v", err)
+	}
+
 	// Load and validate configuration up front. Fail fast with a clear
 	// message if anything required is missing.
 	cfg, err := config.Load()
