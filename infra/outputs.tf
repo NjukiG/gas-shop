@@ -52,4 +52,14 @@ output "rds_master_secret_arn" {
   value       = aws_db_instance.main.master_user_secret[0].secret_arn
 }
 
+output "app_secret_arn" {
+  description = "ARN of the application secret (JWT, Stripe, DB connection)."
+  value       = aws_secretsmanager_secret.app.arn
+}
+
+output "backend_irsa_role_arn" {
+  description = "IAM role ARN the backend ServiceAccount assumes (annotate the SA with this)."
+  value       = aws_iam_role.backend.arn
+}
+
 

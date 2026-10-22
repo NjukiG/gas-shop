@@ -13,6 +13,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0" # any 5.x version
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 
   # Remote state backend: Terraform stores terraform.tfstate in this S3 bucket.

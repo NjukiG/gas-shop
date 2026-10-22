@@ -20,3 +20,21 @@ variable "project_name" {
   type        = string
   default     = "scentcity"
 }
+
+variable "stripe_secret_key" {
+  description = "Stripe secret API key (test mode). Supplied via TF_VAR, never committed."
+  type        = string
+  sensitive   = true
+}
+
+variable "k8s_namespace" {
+  description = "Kubernetes namespace the backend runs in."
+  type        = string
+  default     = "scentcity"
+}
+
+variable "k8s_service_account" {
+  description = "Kubernetes ServiceAccount name the backend pod uses."
+  type        = string
+  default     = "backend"
+}
