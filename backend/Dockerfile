@@ -1,7 +1,7 @@
 # ---- Stage 1: build ----
 # Use the full Go toolchain image to compile the app. This stage is large but
 # it is thrown away; only the compiled binary is copied into the final image.
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install git (some Go modules need it) and CA certs for fetching deps.
 RUN apk add --no-cache git

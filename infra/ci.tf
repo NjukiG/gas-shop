@@ -10,12 +10,17 @@ variable "github_repo" {
   default     = "NjukiG/gas-shop"
 }
 
-# The IAM OIDC provider for GitHub Actions. The thumbprint is GitHub's well-known
-# intermediate CA thumbprint (AWS also verifies it automatically for this issuer).
+# Fetch GitHub's OIDC issuer TLS certificate so we use the CURRENT thumbprint
+# rather than a hardcoded (potentially stale) value.
+data "tls_certificate" "github" {
+  url = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
+}
+
+# The IAM OIDC provider for GitHub Actions.
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
 }
 
 # Trust policy: allow AssumeRoleWithWebIdentity only when the token is from
@@ -36,8 +41,7 @@ data "aws_iam_policy_document" "github_ci_assume" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Lock to our repository (any branch/ref). Could tighten to a branch, e.g.
-    # "repo:NjukiG/gas-shop:ref:refs/heads/main".
+    # Scope to our repository (any branch/ref/environment).
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
