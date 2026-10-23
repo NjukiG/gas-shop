@@ -30,7 +30,7 @@ resource "aws_secretsmanager_secret_version" "app" {
     DB_PORT           = "5432"
     DB_USER           = aws_db_instance.main.username
     DB_NAME           = aws_db_instance.main.db_name
-    ALLOWED_ORIGINS   = "*" # tightened later once we have the real frontend URL
+    ALLOWED_ORIGINS   = var.allowed_origins
   })
 }
 

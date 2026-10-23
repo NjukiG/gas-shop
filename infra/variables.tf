@@ -38,3 +38,9 @@ variable "k8s_service_account" {
   type        = string
   default     = "backend"
 }
+
+variable "allowed_origins" {
+  description = "CORS allowed origins for the backend (the frontend's URL)."
+  type        = string
+  default     = "https://dfd81xdzqvvar.cloudfront.net"
+}
