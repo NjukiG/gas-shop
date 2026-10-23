@@ -14,6 +14,11 @@ resource "random_password" "jwt_secret" {
 resource "aws_secretsmanager_secret" "app" {
   name        = "${local.name}-app"
   description = "ScentCity backend application config"
+
+  # Delete immediately on destroy (no recovery window). Appropriate for a
+  # dev/learning project that is frequently torn down and rebuilt; production
+  # would keep a recovery window.
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "app" {

@@ -62,4 +62,9 @@ output "backend_irsa_role_arn" {
   value       = aws_iam_role.backend.arn
 }
 
+output "github_ci_role_arn" {
+  description = "IAM role ARN GitHub Actions assumes via OIDC to push images."
+  value       = aws_iam_role.github_ci.arn
+}
+
 
