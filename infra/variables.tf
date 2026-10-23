@@ -44,3 +44,9 @@ variable "allowed_origins" {
   type        = string
   default     = "https://dfd81xdzqvvar.cloudfront.net"
 }
+
+variable "backend_alb_hostname" {
+  description = "Hostname of the backend ALB (from the k8s ingress) that CloudFront proxies API requests to."
+  type        = string
+  default     = "k8s-scentcit-backend-6d09df9042-445908304.eu-north-1.elb.amazonaws.com"
+}

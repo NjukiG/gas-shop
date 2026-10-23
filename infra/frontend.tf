@@ -35,12 +35,28 @@ resource "aws_cloudfront_distribution" "frontend" {
   default_root_object = "index.html"
   comment             = "${local.name} frontend"
 
+  # Origin 1: the S3 bucket holding the SPA static files.
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id                = "s3-frontend"
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
   }
 
+  # Origin 2: the backend ALB. CloudFront proxies API requests here over HTTP
+  # (TLS is terminated at CloudFront; the ALB stays HTTP-only internally).
+  origin {
+    domain_name = var.backend_alb_hostname
+    origin_id   = "alb-backend"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Default behavior: serve the SPA from S3.
   default_cache_behavior {
     target_origin_id       = "s3-frontend"
     viewer_protocol_policy = "redirect-to-https" # force HTTPS
@@ -49,6 +65,30 @@ resource "aws_cloudfront_distribution" "frontend" {
 
     # Use the AWS-managed "CachingOptimized" policy.
     cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  }
+
+  # API behaviors: route /public/* and /protected/* to the ALB, un-cached,
+  # forwarding all methods, headers, and the Authorization header.
+  ordered_cache_behavior {
+    path_pattern           = "/public/*"
+    target_origin_id       = "alb-backend"
+    viewer_protocol_policy = "https-only"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+    # AWS-managed "CachingDisabled" + "AllViewerExceptHostHeader" origin request
+    # policy (forwards headers/query/cookies, which APIs need).
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
+  ordered_cache_behavior {
+    path_pattern             = "/protected/*"
+    target_origin_id         = "alb-backend"
+    viewer_protocol_policy    = "https-only"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }
 
   # SPA routing: serve index.html for client-side routes (and on access-denied
