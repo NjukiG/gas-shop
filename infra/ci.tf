@@ -41,11 +41,14 @@ data "aws_iam_policy_document" "github_ci_assume" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Scope to our repository (any branch/ref/environment).
+    # Scope to our repository. NOTE: this account's GitHub OIDC uses the newer
+    # "immutable" subject format that appends numeric owner/repo IDs, e.g.
+    # repo:NjukiG@91128064/gas-shop@1422134104:ref:refs/heads/main — so we match
+    # with wildcards around the owner and repo names to tolerate those IDs.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:*"]
+      values   = ["repo:NjukiG*/gas-shop*:*"]
     }
   }
 }
