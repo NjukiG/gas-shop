@@ -1,0 +1,31 @@
+# Ingress: the AWS Load Balancer Controller sees this and provisions a real,
+# internet-facing Application Load Balancer (ALB) that routes incoming HTTP
+# traffic to the backend Service.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend
+  namespace: scentcity
+  annotations:
+    # Tell the controller to create an ALB (not an internal NLB).
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # target-type "ip" sends traffic straight to pod IPs (required with the
+    # VPC CNI; more efficient than instance mode).
+    alb.ingress.kubernetes.io/target-type: ip
+    # Listen on HTTP port 80 for now. (HTTPS/443 + ACM cert comes later with a
+    # domain.)
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    # Health check path the ALB uses to mark targets healthy.
+    alb.ingress.kubernetes.io/healthcheck-path: /public/products
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80

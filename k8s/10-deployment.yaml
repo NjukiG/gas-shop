@@ -1,0 +1,65 @@
+# Deployment: runs the backend pods. Pulls the image from ECR, runs as the
+# IRSA-enabled ServiceAccount, and tells the app to load config from Secrets
+# Manager (USE_SECRETS_MANAGER=true).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: scentcity
+  labels:
+    app: backend
+spec:
+  replicas: 2 # two pods for availability (spread across nodes/AZs)
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      serviceAccountName: backend # use the IRSA-annotated ServiceAccount
+      containers:
+        - name: backend
+          image: 642328612591.dkr.ecr.eu-north-1.amazonaws.com/scentcity-dev-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            # Tell the app to fetch config from Secrets Manager via IRSA.
+            - name: USE_SECRETS_MANAGER
+              value: "true"
+            - name: AWS_REGION
+              value: eu-north-1
+            - name: APP_SECRET_ARN
+              value: arn:aws:secretsmanager:eu-north-1:642328612591:secret:scentcity-dev-app-j73fP9
+            - name: RDS_SECRET_ARN
+              value: arn:aws:secretsmanager:eu-north-1:642328612591:secret:rds!db-149af4de-f579-4c9a-b8ba-c31376cbc69c-LjKVUp
+            - name: PORT
+              value: "3000"
+            - name: GIN_MODE
+              value: release
+          # Resource requests/limits: requests help the scheduler place pods;
+          # limits cap usage. Small values suit our tiny Go app on t3.small.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          # Liveness: restart the pod if this fails (app is deadlocked/crashed).
+          # Readiness: don't send traffic until this passes (app is ready).
+          # Both hit a lightweight public endpoint that doesn't require auth.
+          livenessProbe:
+            httpGet:
+              path: /public/products
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /public/products
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10

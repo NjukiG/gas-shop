@@ -1,0 +1,15 @@
+# Service: a stable internal address (ClusterIP) that load-balances across the
+# backend pods. The Ingress/ALB routes to this Service, which forwards to pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: scentcity
+spec:
+  type: ClusterIP
+  selector:
+    app: backend # routes to pods with this label
+  ports:
+    - port: 80 # the Service listens on 80
+      targetPort: 3000 # forwards to the container's port 3000
+      protocol: TCP

@@ -1,0 +1,17 @@
+# Namespace: an isolated space in the cluster for the ScentCity app.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scentcity
+---
+# ServiceAccount: the identity the backend pods run as. The annotation links it
+# to the IRSA IAM role, so pods using this ServiceAccount can read secrets from
+# AWS Secrets Manager (and nothing more). This is the pod-level least-privilege
+# identity we set up in Terraform.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend
+  namespace: scentcity
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::642328612591:role/scentcity-dev-backend-irsa
