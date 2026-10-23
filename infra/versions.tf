@@ -21,6 +21,10 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.0"
+    }
   }
 
   # Remote state backend: Terraform stores terraform.tfstate in this S3 bucket.
