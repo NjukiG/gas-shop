@@ -2,7 +2,7 @@
 // Bearer token from localStorage. Each returns { ok, data } so callers can
 // handle success/failure uniformly.
 
-const BASE = "http://localhost:3000";
+import { API_URL as BASE } from "./apiConfig";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

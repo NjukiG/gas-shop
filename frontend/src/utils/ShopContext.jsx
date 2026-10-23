@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "./apiConfig";
 
 // Create the ShopContext
 const ShopContext = createContext();
@@ -37,7 +38,7 @@ export const ShopProvider = ({ children }) => {
   const fetchProducts = async () => {
     setProductsLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/public/products");
+      const response = await fetch(`${API_URL}/public/products`);
       const data = await response.json();
       setProducts(data.products || []);
     } catch (error) {
@@ -52,7 +53,7 @@ export const ShopProvider = ({ children }) => {
     setProductLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3000/public/products/${productId}`
+        `${API_URL}/public/products/${productId}`
       );
       const data = await response.json();
       setProduct(data.product || {});
@@ -65,7 +66,7 @@ export const ShopProvider = ({ children }) => {
   // Function to fetch categories
   const fetchCategories = async () => {
     try {
-      const response = await fetch("http://localhost:3000/public/categories");
+      const response = await fetch(`${API_URL}/public/categories`);
       const data = await response.json();
       setCategories(data.categories || []);
     } catch (error) {
@@ -77,7 +78,7 @@ export const ShopProvider = ({ children }) => {
   const fetchProductsByCategory = async (categoryId) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/public/categories/${categoryId}/products`
+        `${API_URL}/public/categories/${categoryId}/products`
       );
       const data = await response.json();
       setCategoryProducts(data.products || []);
@@ -94,7 +95,7 @@ export const ShopProvider = ({ children }) => {
   const fetchCartDetails = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/review`,
+        `${API_URL}/protected/cart/review`,
         {
           method: "GET",
           headers: {
@@ -126,7 +127,7 @@ export const ShopProvider = ({ children }) => {
   const addItemToCart = async (productId, quantity) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/items`,
+        `${API_URL}/protected/cart/items`,
         {
           method: "POST",
           headers: {
@@ -154,7 +155,7 @@ export const ShopProvider = ({ children }) => {
   const removeItemFromCart = async (productId) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/items/${productId}`,
+        `${API_URL}/protected/cart/items/${productId}`,
         {
           method: "DELETE",
           headers: {
@@ -182,7 +183,7 @@ export const ShopProvider = ({ children }) => {
   const updateCartItemQuantity = async (productId, quantity) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/cart/items/${productId}`,
+        `${API_URL}/protected/cart/items/${productId}`,
         {
           method: "PUT",
           headers: {
@@ -233,7 +234,7 @@ export const ShopProvider = ({ children }) => {
   const fetchShippingDetails = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3000/protected/shipping-details",
+        `${API_URL}/protected/shipping-details`,
         {
           method: "GET",
           headers: {
@@ -254,7 +255,7 @@ export const ShopProvider = ({ children }) => {
   const updateShippingDetails = async (details) => {
     try {
       const response = await fetch(
-        "http://localhost:3000/protected/shipping-details",
+        `${API_URL}/protected/shipping-details`,
         {
           method: "PUT",
           headers: {
@@ -283,7 +284,7 @@ export const ShopProvider = ({ children }) => {
   const fetchOrders = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/orders`,
+        `${API_URL}/protected/orders`,
         {
           method: "GET",
           headers: {
@@ -304,7 +305,7 @@ export const ShopProvider = ({ children }) => {
   const createPaymentIntent = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/payments/create-intent`,
+        `${API_URL}/protected/payments/create-intent`,
         {
           method: "POST",
           headers: {
@@ -331,7 +332,7 @@ export const ShopProvider = ({ children }) => {
   const makeNewOrder = async (paymentIntentId) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/protected/orders`,
+        `${API_URL}/protected/orders`,
         {
           method: "POST",
           headers: {

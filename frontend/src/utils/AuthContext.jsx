@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { API_URL } from "./apiConfig";
 
 const AuthContext = createContext();
 
@@ -17,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   // Register a new account. Returns true on success so the caller can redirect.
   const registerUser = async (userData) => {
     try {
-      const response = await fetch("http://localhost:3000/public/register", {
+      const response = await fetch(`${API_URL}/public/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -44,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   // Log in. Returns true on success so the caller can redirect.
   const loginUser = async (credentials) => {
     try {
-      const response = await fetch("http://localhost:3000/public/login", {
+      const response = await fetch(`${API_URL}/public/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -84,7 +85,7 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token found");
 
-      const response = await fetch("http://localhost:3000/protected/validate", {
+      const response = await fetch(`${API_URL}/protected/validate`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`, // Ensure the token is included
