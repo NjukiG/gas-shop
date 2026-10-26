@@ -37,6 +37,13 @@ type Config struct {
 	// StripeSecretKey is the Stripe secret API key used to create payment
 	// intents. Required for the payment flow.
 	StripeSecretKey string
+
+	// AWSRegion is the region for AWS SDK calls (e.g. Bedrock). Defaults to the
+	// deployment region.
+	AWSRegion string
+
+	// BedrockModelID is the Bedrock model used by the AI scent finder.
+	BedrockModelID string
 }
 
 // current holds the loaded configuration so that packages which cannot easily
@@ -79,6 +86,8 @@ func Load() (*Config, error) {
 		Port:            getEnvDefault("PORT", "3000"),
 		AllowedOrigins:  parseOrigins(getEnvDefault("ALLOWED_ORIGINS", "http://localhost:5173")),
 		StripeSecretKey: os.Getenv("STRIPE_SECRET_KEY"),
+		AWSRegion:       getEnvDefault("AWS_REGION", "eu-north-1"),
+		BedrockModelID:  getEnvDefault("BEDROCK_MODEL_ID", "amazon.nova-lite-v1:0"),
 	}
 
 	if err := cfg.validate(); err != nil {

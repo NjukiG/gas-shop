@@ -16,7 +16,8 @@ func RegisterProductRoutes(router *gin.Engine) {
 		publicRoutes.GET("/categories/:id/products", controllers.GetProductsByCategory)
 		publicRoutes.GET("/products/:id", controllers.GetSingleProduct)
 
-
+		// AI scent finder (Amazon Bedrock) — public, no login required.
+		publicRoutes.POST("/scent-finder", controllers.ScentFinder)
 	}
 
 	// Admin-only mutations. Browsing products is public (above); creating,
