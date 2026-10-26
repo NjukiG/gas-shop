@@ -71,15 +71,25 @@ resource "aws_iam_role" "backend" {
 }
 
 # Permission policy: read ONLY our app secret and the RDS-managed password
-# secret. Nothing else in Secrets Manager.
+# secret, and invoke the Bedrock model used by the AI scent finder.
 data "aws_iam_policy_document" "backend_secrets" {
   statement {
+    sid     = "ReadSecrets"
     effect  = "Allow"
     actions = ["secretsmanager:GetSecretValue"]
     resources = [
       aws_secretsmanager_secret.app.arn,
       aws_db_instance.main.master_user_secret[0].secret_arn,
     ]
+  }
+
+  # Invoke the Bedrock model (scent finder). Scoped to foundation models in the
+  # region; Bedrock model ARNs aren't account-specific.
+  statement {
+    sid       = "InvokeBedrock"
+    effect    = "Allow"
+    actions   = ["bedrock:InvokeModel"]
+    resources = ["arn:aws:bedrock:${var.region}::foundation-model/*"]
   }
 }
 
