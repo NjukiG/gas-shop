@@ -7,7 +7,7 @@
 variable "github_repo" {
   description = "GitHub repo (owner/name) allowed to assume the CI role."
   type        = string
-  default     = "NjukiG/gas-shop"
+  default     = "NjukiG/scentcity"
 }
 
 # Fetch GitHub's OIDC issuer TLS certificate so we use the CURRENT thumbprint
@@ -43,12 +43,12 @@ data "aws_iam_policy_document" "github_ci_assume" {
 
     # Scope to our repository. NOTE: this account's GitHub OIDC uses the newer
     # "immutable" subject format that appends numeric owner/repo IDs, e.g.
-    # repo:NjukiG@91128064/gas-shop@1422134104:ref:refs/heads/main — so we match
+    # repo:NjukiG@91128064/scentcity@<id>:ref:refs/heads/main — so we match
     # with wildcards around the owner and repo names to tolerate those IDs.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:NjukiG*/gas-shop*:*"]
+      values   = ["repo:NjukiG*/scentcity*:*"]
     }
   }
 }
